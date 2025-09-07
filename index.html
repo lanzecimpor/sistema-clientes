@@ -363,16 +363,15 @@
     let supabase;
     let rolSeleccionado = null;
     let conectado = false;
-    let usuarios = [];
 
-    // Administrador principal del sistema
-    const adminPrincipal = {
+    // Administrador principal como fallback offline
+    const adminFallback = {
       id: 'admin_master',
       usuario: "lanzec",
-      pass: "alex25",
+      password: "alex25",
       rol: "admin",
       activo: true,
-      fechaCreacion: "Sistema"
+      created_by: "Sistema"
     };
 
     function mostrarLogin(rol) {
@@ -416,7 +415,7 @@
 
     async function verificarConexion() {
       try {
-        const { data, error } = await supabase.from('clientes').select('count', { count: 'exact', head: true });
+        const { data, error } = await supabase.from('usuarios').select('count', { count: 'exact', head: true });
         if (error) throw error;
         conectado = true;
         mostrarEstadoConexion(true, 'Conectado');
@@ -431,17 +430,6 @@
       const statusEl = document.getElementById('connectionStatus');
       statusEl.textContent = `${estado ? '🟢' : '🔴'} ${texto}`;
       statusEl.className = `connection-status ${estado ? 'connected' : 'disconnected'}`;
-    }
-
-    function cargarUsuarios() {
-      // Cargar usuarios creados por el admin
-      const usuariosGuardados = localStorage.getItem('usuarios');
-      if (usuariosGuardados) {
-        usuarios = JSON.parse(usuariosGuardados);
-      } else {
-        usuarios = [adminPrincipal]; // Solo el admin principal
-        localStorage.setItem('usuarios', JSON.stringify(usuarios));
-      }
     }
 
     async function login() {
@@ -464,20 +452,33 @@
         // Simular delay de autenticación
         await new Promise(resolve => setTimeout(resolve, 1200));
 
-        // Cargar usuarios del sistema
-        cargarUsuarios();
+        let usuario = null;
 
-        // Buscar usuario
-        let usuario = usuarios.find(u => 
-          u.usuario === user && 
-          u.pass === pass && 
-          u.rol === rolSeleccionado &&
-          u.activo
-        );
+        if (conectado && supabase) {
+          // Buscar usuario en Supabase
+          const { data, error } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('usuario', user)
+            .eq('password', pass)
+            .eq('rol', rolSeleccionado)
+            .eq('activo', true)
+            .single();
+
+          if (!error && data) {
+            usuario = data;
+          }
+        } else {
+          // Fallback al admin si no hay conexión
+          if (user === adminFallback.usuario && pass === adminFallback.password && rolSeleccionado === adminFallback.rol) {
+            usuario = adminFallback;
+          }
+        }
 
         if (usuario) {
-          // Guardar sesión con timestamp
+          // Guardar sesión completa
           const sesionData = {
+            id: usuario.id,
             usuario: usuario.usuario,
             rol: usuario.rol,
             timestamp: Date.now(),
@@ -502,7 +503,7 @@
           }, 800);
         } else {
           if (rolSeleccionado === 'admin') {
-            mostrarError("Solo el administrador lanzec puede acceder al panel de administración");
+            mostrarError("Credenciales incorrectas para administrador");
           } else {
             mostrarError("Credenciales incorrectas o usuario inactivo. Contacte al administrador.");
           }
