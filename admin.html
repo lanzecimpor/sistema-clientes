@@ -58,6 +58,27 @@
       font-size: 24px;
     }
     
+    .connection-status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1000;
+    }
+    
+    .connected {
+      background: #28a745;
+      color: white;
+    }
+    
+    .disconnected {
+      background: #ff4444;
+      color: white;
+    }
+    
     .stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -355,6 +376,13 @@
       font-style: italic;
     }
     
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
     /* Animaciones */
     @keyframes slideInDown {
       from {
@@ -461,10 +489,16 @@
       .data-table td {
         padding: 8px;
       }
+      
+      .tools-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="connection-status" id="connectionStatus">🔄 Conectando...</div>
+  
   <div class="header">
     <div class="user-info">
       <div class="user-avatar" id="userAvatar">A</div>
@@ -482,7 +516,7 @@
   <!-- Estadísticas -->
   <div class="stats">
     <div class="stat-card">
-      <span class="stat-number" id="totalUsuarios">0</span>
+      <span class="stat-number" id="totalUsuarios">5</span>
       <span class="stat-label">Total Usuarios</span>
     </div>
     <div class="stat-card">
@@ -490,7 +524,7 @@
       <span class="stat-label">Total Clientes</span>
     </div>
     <div class="stat-card">
-      <span class="stat-number" id="usuariosActivos">0</span>
+      <span class="stat-number" id="usuariosActivos">5</span>
       <span class="stat-label">Usuarios Activos</span>
     </div>
     <div class="stat-card">
@@ -513,34 +547,8 @@
     <!-- Tab Usuarios -->
     <div id="usuarios-tab" class="tab-content active">
       <h3>👥 Gestión de Usuarios</h3>
+      <p style="color: #ccc; margin-bottom: 20px;">Los usuarios se gestionan en la base de datos. Aquí puedes ver los usuarios actuales del sistema.</p>
       
-      <form id="usuarioForm">
-        <div class="form-grid">
-          <div class="input-group">
-            <label for="nuevoUsuario" class="required">Usuario</label>
-            <input type="text" id="nuevoUsuario" placeholder="Nombre de usuario" required maxlength="20">
-          </div>
-          
-          <div class="input-group">
-            <label for="nuevaPassword" class="required">Contraseña</label>
-            <input type="password" id="nuevaPassword" placeholder="Contraseña" required maxlength="50">
-          </div>
-          
-          <div class="input-group">
-            <label for="nuevoRol" class="required">Rol</label>
-            <select id="nuevoRol" required>
-              <option value="ventas">Ventas</option>
-              <option value="transporte">Transporte</option>
-              <option value="admin">Administrador</option>
-            </select>
-          </div>
-        </div>
-        
-        <button type="submit" class="btn-primary">
-          👤 Crear Usuario
-        </button>
-      </form>
-
       <div class="search-bar">
         <span class="search-icon">🔍</span>
         <input type="text" id="buscarUsuario" placeholder="Buscar usuarios...">
@@ -552,12 +560,39 @@
             <th>Usuario</th>
             <th>Rol</th>
             <th>Estado</th>
-            <th>Acciones</th>
+            <th>Fecha Creación</th>
           </tr>
         </thead>
         <tbody id="usuariosTable">
           <tr>
-            <td colspan="4" class="empty-state">Cargando usuarios...</td>
+            <td>ventas1</td>
+            <td><span class="badge ventas">ventas</span></td>
+            <td><span class="badge active">Activo</span></td>
+            <td>Sistema</td>
+          </tr>
+          <tr>
+            <td>ventas2</td>
+            <td><span class="badge ventas">ventas</span></td>
+            <td><span class="badge active">Activo</span></td>
+            <td>Sistema</td>
+          </tr>
+          <tr>
+            <td>trans1</td>
+            <td><span class="badge transporte">transporte</span></td>
+            <td><span class="badge active">Activo</span></td>
+            <td>Sistema</td>
+          </tr>
+          <tr>
+            <td>trans2</td>
+            <td><span class="badge transporte">transporte</span></td>
+            <td><span class="badge active">Activo</span></td>
+            <td>Sistema</td>
+          </tr>
+          <tr>
+            <td>admin1</td>
+            <td><span class="badge admin">admin</span></td>
+            <td><span class="badge active">Activo</span></td>
+            <td>Sistema</td>
           </tr>
         </tbody>
       </table>
@@ -605,15 +640,15 @@
       
       <div class="form-grid">
         <div class="stat-card">
-          <span class="stat-number" id="reporteVentas">0</span>
+          <span class="stat-number" id="reporteVentas">2</span>
           <span class="stat-label">Usuarios Ventas</span>
         </div>
         <div class="stat-card">
-          <span class="stat-number" id="reporteTransporte">0</span>
+          <span class="stat-number" id="reporteTransporte">2</span>
           <span class="stat-label">Usuarios Transporte</span>
         </div>
         <div class="stat-card">
-          <span class="stat-number" id="reporteAdmin">0</span>
+          <span class="stat-number" id="reporteAdmin">1</span>
           <span class="stat-label">Administradores</span>
         </div>
         <div class="stat-card">
@@ -624,33 +659,45 @@
 
       <div style="margin-top: 30px;">
         <h4>🔧 Herramientas de Sistema</h4>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div class="tools-grid">
           <button class="btn-warning" onclick="limpiarDatos()">
             🗑️ Limpiar Datos
           </button>
           <button class="btn-secondary" onclick="respaldarDatos()">
             💾 Respaldar Datos
           </button>
-          <button class="btn-primary" onclick="reiniciarSistema()">
-            🔄 Reiniciar Sistema
+          <button class="btn-primary" onclick="sincronizarDatos()">
+            🔄 Sincronizar
+          </button>
+          <button class="btn-secondary" onclick="verEstadisticasDetalladas()">
+            📈 Estadísticas
           </button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <script>
+    // ✅ CONFIGURACIÓN SUPABASE - YA CONFIGURADO
+    const SUPABASE_URL = 'https://tghrujeeotgfseqonskm.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnaHJ1amVlb3RnZnNlcW9uc2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyNDk4OTgsImV4cCI6MjA3MjgyNTg5OH0.mA1MyI43Lx7OTtmShNc9uAdZG2C9IYBBnpsbej7GkR0';
+    
+    let supabase;
     let usuarios = [];
     let clientes = [];
     let usuariosFiltrados = [];
     let clientesFiltrados = [];
     let usuarioActual = null;
     let tabActual = 'usuarios';
+    let conectado = false;
 
     // Inicializar
     document.addEventListener('DOMContentLoaded', function() {
       verificarSesion();
-      cargarDatos();
+      inicializarSupabase();
       inicializarEventos();
     });
 
@@ -671,31 +718,72 @@
       document.getElementById("userAvatar").textContent = usuarioActual.usuario.charAt(0).toUpperCase();
     }
 
+    function inicializarSupabase() {
+      try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        verificarConexion();
+      } catch (error) {
+        console.error('Error inicializando Supabase:', error);
+        mostrarEstadoConexion(false, 'Error de Conexión');
+        modoOffline();
+      }
+    }
+
+    async function verificarConexion() {
+      try {
+        const { data, error } = await supabase.from('clientes').select('count', { count: 'exact', head: true });
+        if (error) throw error;
+        conectado = true;
+        mostrarEstadoConexion(true, 'Conectado a la Nube');
+        cargarDatos();
+      } catch (error) {
+        console.error('Error de conexión:', error);
+        conectado = false;
+        mostrarEstadoConexion(false, 'Modo Offline');
+        modoOffline();
+      }
+    }
+
+    function mostrarEstadoConexion(estado, texto) {
+      const statusEl = document.getElementById('connectionStatus');
+      statusEl.textContent = `${estado ? '🟢' : '🔴'} ${texto}`;
+      statusEl.className = `connection-status ${estado ? 'connected' : 'disconnected'}`;
+    }
+
+    function modoOffline() {
+      clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+      clientesFiltrados = [...clientes];
+      actualizarEstadisticas();
+      mostrarClientes();
+    }
+
     function inicializarEventos() {
-      document.getElementById('usuarioForm').addEventListener('submit', crearUsuario);
       document.getElementById('buscarUsuario').addEventListener('input', filtrarUsuarios);
       document.getElementById('buscarClienteAdmin').addEventListener('input', filtrarClientes);
     }
 
-    function cargarDatos() {
-      // Cargar usuarios
-      usuarios = [
-        { usuario: "ventas1", pass: "1234", rol: "ventas", activo: true },
-        { usuario: "ventas2", pass: "1234", rol: "ventas", activo: true },
-        { usuario: "trans1", pass: "1234", rol: "transporte", activo: true },
-        { usuario: "trans2", pass: "1234", rol: "transporte", activo: true },
-        { usuario: "admin1", pass: "admin123", rol: "admin", activo: true }
-      ];
-      
-      // Cargar clientes
-      clientes = JSON.parse(localStorage.getItem('clientes')) || [];
-      
-      usuariosFiltrados = [...usuarios];
-      clientesFiltrados = [...clientes];
-      
-      actualizarEstadisticas();
-      mostrarUsuarios();
-      mostrarClientes();
+    async function cargarDatos() {
+      if (!conectado) return;
+
+      try {
+        // Cargar clientes desde Supabase
+        const { data: clientesData, error: clientesError } = await supabase
+          .from('clientes')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (clientesError) throw clientesError;
+        
+        clientes = clientesData || [];
+        clientesFiltrados = [...clientes];
+        
+        actualizarEstadisticas();
+        mostrarClientes();
+        
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+        modoOffline();
+      }
     }
 
     function cambiarTab(tab) {
@@ -713,59 +801,6 @@
       }
     }
 
-    async function crearUsuario(e) {
-      e.preventDefault();
-      
-      const usuarioData = {
-        usuario: document.getElementById('nuevoUsuario').value.trim(),
-        pass: document.getElementById('nuevaPassword').value.trim(),
-        rol: document.getElementById('nuevoRol').value,
-        activo: true,
-        fechaCreacion: new Date().toLocaleDateString()
-      };
-
-      if (usuarios.find(u => u.usuario === usuarioData.usuario)) {
-        mostrarError('El usuario ya existe');
-        return;
-      }
-
-      usuarios.push(usuarioData);
-      document.getElementById('usuarioForm').reset();
-      
-      usuariosFiltrados = [...usuarios];
-      mostrarUsuarios();
-      actualizarEstadisticas();
-      mostrarExito(`Usuario ${usuarioData.usuario} creado correctamente`);
-    }
-
-    function mostrarUsuarios() {
-      const tbody = document.getElementById('usuariosTable');
-      
-      if (usuariosFiltrados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No se encontraron usuarios</td></tr>';
-        return;
-      }
-      
-      tbody.innerHTML = usuariosFiltrados.map((usuario, index) => `
-        <tr>
-          <td>${usuario.usuario}</td>
-          <td><span class="badge ${usuario.rol}">${usuario.rol}</span></td>
-          <td><span class="badge ${usuario.activo ? 'active' : 'inactive'}">${usuario.activo ? 'Activo' : 'Inactivo'}</span></td>
-          <td>
-            <button class="btn-warning" onclick="cambiarEstadoUsuario(${usuarios.indexOf(usuario)})">
-              ${usuario.activo ? '❌ Desactivar' : '✅ Activar'}
-            </button>
-            <button class="btn-secondary" onclick="editarUsuario(${usuarios.indexOf(usuario)})">
-              ✏️ Editar
-            </button>
-            <button class="btn-danger" onclick="eliminarUsuario(${usuarios.indexOf(usuario)})">
-              🗑️ Eliminar
-            </button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
     function mostrarClientes() {
       const tbody = document.getElementById('clientesTable');
       
@@ -780,13 +815,13 @@
           <td>${cliente.nombre}</td>
           <td>${cliente.celular}</td>
           <td>${cliente.ubicacion.substring(0, 30)}${cliente.ubicacion.length > 30 ? '...' : ''}</td>
-          <td>${cliente.usuario || 'N/A'}</td>
-          <td>${cliente.fechaRegistro || 'N/A'}</td>
+          <td>${cliente.created_by || 'N/A'}</td>
+          <td>${new Date(cliente.created_at).toLocaleDateString()}</td>
           <td>
-            <button class="btn-secondary" onclick="editarClienteAdmin(${clientes.indexOf(cliente)})">
+            <button class="btn-secondary" onclick="editarClienteAdmin('${cliente.id}')">
               ✏️ Editar
             </button>
-            <button class="btn-danger" onclick="eliminarCliente(${clientes.indexOf(cliente)})">
+            <button class="btn-danger" onclick="eliminarCliente('${cliente.id}')">
               🗑️ Eliminar
             </button>
           </td>
@@ -795,12 +830,7 @@
     }
 
     function filtrarUsuarios() {
-      const termino = document.getElementById('buscarUsuario').value.toLowerCase();
-      usuariosFiltrados = usuarios.filter(usuario => 
-        usuario.usuario.toLowerCase().includes(termino) ||
-        usuario.rol.toLowerCase().includes(termino)
-      );
-      mostrarUsuarios();
+      // Los usuarios están estáticos por ahora
     }
 
     function filtrarClientes() {
@@ -814,45 +844,9 @@
       mostrarClientes();
     }
 
-    function cambiarEstadoUsuario(index) {
-      const usuario = usuarios[index];
-      usuario.activo = !usuario.activo;
-      
-      usuariosFiltrados = [...usuarios];
-      mostrarUsuarios();
-      actualizarEstadisticas();
-      mostrarExito(`Usuario ${usuario.usuario} ${usuario.activo ? 'activado' : 'desactivado'}`);
-    }
-
-    function editarUsuario(index) {
-      const usuario = usuarios[index];
-      
-      const nuevaPassword = prompt("Nueva contraseña:", usuario.pass);
-      if (nuevaPassword && nuevaPassword !== usuario.pass) {
-        usuario.pass = nuevaPassword;
-        mostrarExito('Contraseña actualizada correctamente');
-      }
-    }
-
-    function eliminarUsuario(index) {
-      const usuario = usuarios[index];
-      
-      if (usuario.usuario === usuarioActual.usuario) {
-        mostrarError('No puedes eliminar tu propio usuario');
-        return;
-      }
-      
-      if (confirm(`¿Eliminar usuario ${usuario.usuario}?`)) {
-        usuarios.splice(index, 1);
-        usuariosFiltrados = [...usuarios];
-        mostrarUsuarios();
-        actualizarEstadisticas();
-        mostrarExito('Usuario eliminado correctamente');
-      }
-    }
-
-    function editarClienteAdmin(index) {
-      const cliente = clientes[index];
+    async function editarClienteAdmin(clienteId) {
+      const cliente = clientes.find(c => c.id === clienteId);
+      if (!cliente) return;
       
       const nuevoNombre = prompt("Nuevo nombre:", cliente.nombre);
       if (nuevoNombre && nuevoNombre !== cliente.nombre) {
@@ -864,55 +858,87 @@
         cliente.celular = nuevoCelular;
       }
       
+      const nuevoEmail = prompt("Nuevo email:", cliente.email || '');
+      cliente.email = nuevoEmail || null;
+      
       const nuevaUbicacion = prompt("Nueva ubicación:", cliente.ubicacion);
       if (nuevaUbicacion && nuevaUbicacion !== cliente.ubicacion) {
         cliente.ubicacion = nuevaUbicacion;
       }
-
-      localStorage.setItem('clientes', JSON.stringify(clientes));
-      clientesFiltrados = [...clientes];
-      mostrarClientes();
-      mostrarExito('Cliente actualizado correctamente');
-    }
-
-    function eliminarCliente(index) {
-      const cliente = clientes[index];
       
-      if (confirm(`¿Eliminar cliente ${cliente.codigo} - ${cliente.nombre}?`)) {
-        clientes.splice(index, 1);
-        localStorage.setItem('clientes', JSON.stringify(clientes));
+      const nuevaReferencia = prompt("Nueva referencia:", cliente.referencia || '');
+      cliente.referencia = nuevaReferencia || null;
+
+      try {
+        if (conectado && supabase) {
+          const { error } = await supabase
+            .from('clientes')
+            .update(cliente)
+            .eq('id', cliente.id);
+            
+          if (error) throw error;
+        } else {
+          localStorage.setItem('clientes', JSON.stringify(clientes));
+        }
+
         clientesFiltrados = [...clientes];
         mostrarClientes();
-        actualizarEstadisticas();
-        mostrarExito('Cliente eliminado correctamente');
+        mostrarExito('Cliente actualizado correctamente');
+      } catch (error) {
+        console.error('Error actualizando cliente:', error);
+        mostrarError('Error al actualizar el cliente');
+      }
+    }
+
+    async function eliminarCliente(clienteId) {
+      const cliente = clientes.find(c => c.id === clienteId);
+      if (!cliente) return;
+      
+      if (confirm(`¿Eliminar cliente ${cliente.codigo} - ${cliente.nombre}?\n\nEsta acción no se puede deshacer.`)) {
+        try {
+          if (conectado && supabase) {
+            const { error } = await supabase
+              .from('clientes')
+              .delete()
+              .eq('id', cliente.id);
+              
+            if (error) throw error;
+            
+            clientes = clientes.filter(c => c.id !== cliente.id);
+          } else {
+            clientes = clientes.filter(c => c.id !== cliente.id);
+            localStorage.setItem('clientes', JSON.stringify(clientes));
+          }
+
+          clientesFiltrados = [...clientes];
+          mostrarClientes();
+          actualizarEstadisticas();
+          mostrarExito('Cliente eliminado correctamente');
+        } catch (error) {
+          console.error('Error eliminando cliente:', error);
+          mostrarError('Error al eliminar el cliente');
+        }
       }
     }
 
     function actualizarEstadisticas() {
       const hoy = new Date().toDateString();
       
-      document.getElementById('totalUsuarios').textContent = usuarios.length;
       document.getElementById('totalClientes').textContent = clientes.length;
-      document.getElementById('usuariosActivos').textContent = usuarios.filter(u => u.activo).length;
       
       const clientesHoy = clientes.filter(c => {
-        if (!c.fechaRegistro) return false;
-        const fecha = new Date(c.fechaRegistro.split('/').reverse().join('-'));
+        const fecha = new Date(c.created_at);
         return fecha.toDateString() === hoy;
       }).length;
       document.getElementById('clientesHoy').textContent = clientesHoy;
     }
 
     function actualizarReportes() {
-      document.getElementById('reporteVentas').textContent = usuarios.filter(u => u.rol === 'ventas').length;
-      document.getElementById('reporteTransporte').textContent = usuarios.filter(u => u.rol === 'transporte').length;
-      document.getElementById('reporteAdmin').textContent = usuarios.filter(u => u.rol === 'admin').length;
-      
       const mesActual = new Date().getMonth();
       const añoActual = new Date().getFullYear();
+      
       const clientesMes = clientes.filter(c => {
-        if (!c.fechaRegistro) return false;
-        const fecha = new Date(c.fechaRegistro.split('/').reverse().join('-'));
+        const fecha = new Date(c.created_at);
         return fecha.getMonth() === mesActual && fecha.getFullYear() === añoActual;
       }).length;
       document.getElementById('reporteClientesMes').textContent = clientesMes;
@@ -925,9 +951,9 @@
       }
 
       const csvContent = "data:text/csv;charset=utf-8," 
-        + "Código,Nombre,Celular,Ubicación,Referencia,Fecha Registro,Usuario\n"
+        + "Código,Nombre,Celular,Email,Ubicación,Referencia,Fecha Registro,Usuario\n"
         + clientes.map(c => 
-          `"${c.codigo}","${c.nombre}","${c.celular}","${c.ubicacion}","${c.referencia || ''}","${c.fechaRegistro || ''}","${c.usuario || ''}"`
+          `"${c.codigo}","${c.nombre}","${c.celular}","${c.email || ''}","${c.ubicacion}","${c.referencia || ''}","${new Date(c.created_at).toLocaleDateString()}","${c.created_by || ''}"`
         ).join("\n");
       
       const encodedUri = encodeURI(csvContent);
@@ -943,12 +969,19 @@
 
     function limpiarDatos() {
       if (confirm('⚠️ ¿Está seguro que desea eliminar TODOS los clientes?\n\nEsta acción no se puede deshacer.')) {
-        localStorage.removeItem('clientes');
-        clientes = [];
-        clientesFiltrados = [];
-        mostrarClientes();
-        actualizarEstadisticas();
-        mostrarExito('Todos los datos de clientes han sido eliminados');
+        if (confirm('🚨 ÚLTIMA CONFIRMACIÓN\n\nEsto eliminará PERMANENTEMENTE todos los datos de clientes.')) {
+          if (conectado && supabase) {
+            // En producción, esto requeriría permisos especiales
+            mostrarError('Esta acción requiere permisos especiales en la base de datos');
+          } else {
+            localStorage.removeItem('clientes');
+            clientes = [];
+            clientesFiltrados = [];
+            mostrarClientes();
+            actualizarEstadisticas();
+            mostrarExito('Todos los datos de clientes han sido eliminados');
+          }
+        }
       }
     }
 
@@ -956,7 +989,8 @@
       const backup = {
         clientes: clientes,
         fecha: new Date().toISOString(),
-        version: '1.0'
+        version: '1.0',
+        usuario: usuarioActual.usuario
       };
       
       const dataStr = JSON.stringify(backup, null, 2);
@@ -972,15 +1006,38 @@
       mostrarExito('Respaldo creado correctamente');
     }
 
-    function reiniciarSistema() {
-      if (confirm('⚠️ ¿Reiniciar todo el sistema?\n\nEsto eliminará todos los datos y cerrará todas las sesiones.')) {
-        localStorage.clear();
-        sessionStorage.clear();
-        mostrarExito('Sistema reiniciado. Redirigiendo...');
-        setTimeout(() => {
-          window.location.href = "index.html";
-        }, 2000);
+    function sincronizarDatos() {
+      if (conectado) {
+        cargarDatos();
+        mostrarExito('Datos sincronizados con la nube');
+      } else {
+        mostrarError('No hay conexión a internet');
       }
+    }
+
+    function verEstadisticasDetalladas() {
+      const stats = {
+        totalClientes: clientes.length,
+        clientesHoy: clientes.filter(c => new Date(c.created_at).toDateString() === new Date().toDateString()).length,
+        clientesPorUsuario: {},
+        ubicacionesMasComunes: {}
+      };
+
+      // Clientes por usuario
+      clientes.forEach(c => {
+        const usuario = c.created_by || 'Desconocido';
+        stats.clientesPorUsuario[usuario] = (stats.clientesPorUsuario[usuario] || 0) + 1;
+      });
+
+      const mensaje = `📊 ESTADÍSTICAS DETALLADAS\n\n` +
+        `📋 Total de clientes: ${stats.totalClientes}\n` +
+        `📅 Clientes registrados hoy: ${stats.clientesHoy}\n\n` +
+        `👥 Clientes por usuario:\n` +
+        Object.entries(stats.clientesPorUsuario)
+          .map(([usuario, cantidad]) => `• ${usuario}: ${cantidad} clientes`)
+          .join('\n');
+
+      alert(mensaje);
     }
 
     function mostrarExito(mensaje) {
