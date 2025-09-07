@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+}<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -580,7 +580,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
-    // ✅ CONFIGURACIÓN SUPABASE - YA CONFIGURADO
+    // ✅ CONFIGURACIÓN SUPABASE
     const SUPABASE_URL = 'https://tghrujeeotgfseqonskm.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnaHJ1amVlb3RnZnNlcW9uc2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyNDk4OTgsImV4cCI6MjA3MjgyNTg5OH0.mA1MyI43Lx7OTtmShNc9uAdZG2C9IYBBnpsbej7GkR0';
     
@@ -613,6 +613,7 @@
       
       document.getElementById("userName").textContent = usuarioActual.usuario;
       document.getElementById("userAvatar").textContent = usuarioActual.usuario.charAt(0).toUpperCase();
+      conectado = usuarioActual.conectado || false;
     }
 
     function inicializarSupabase() {
@@ -661,21 +662,27 @@
     }
 
     async function cargarClientes() {
-      if (!conectado) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('clientes')
-          .select('*')
-          .order('created_at', { ascending: false });
+      if (conectado && supabase) {
+        try {
+          const { data, error } = await supabase
+            .from('clientes')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+          if (error) throw error;
           
-        if (error) throw error;
-        
-        clientes = data || [];
-        mostrarSelectorClientes();
-        
-      } catch (error) {
-        console.error('Error cargando clientes:', error);
+          clientes = data || [];
+          
+          // Sincronizar con localStorage
+          localStorage.setItem('clientes', JSON.stringify(clientes));
+          
+          mostrarSelectorClientes();
+          
+        } catch (error) {
+          console.error('Error cargando clientes:', error);
+          modoOffline();
+        }
+      } else {
         modoOffline();
       }
     }
