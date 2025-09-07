@@ -744,7 +744,7 @@
       const btnGuardar = document.getElementById('btnGuardar');
       
       const clienteData = {
-        id: crypto.randomUUID(), // Generar ID único
+        id: crypto.randomUUID(),
         codigo: document.getElementById('codigo').value.trim().toUpperCase(),
         nombre: document.getElementById('nombre').value.trim(),
         celular: document.getElementById('celular').value.trim(),
@@ -929,13 +929,35 @@
       e.target.value = valor;
     }
 
-    function validarCodigoUnico(e) {
+    async function validarCodigoUnico(e) {
       const codigo = e.target.value.trim().toUpperCase();
-      if (codigo && clientes.find(c => c.codigo === codigo)) {
-        e.target.style.borderColor = '#ff4444';
-        mostrarError('El código de cliente ya existe');
-      } else {
-        e.target.style.borderColor = 'rgba(0, 170, 255, 0.3)';
+      if (codigo) {
+        if (conectado && supabase) {
+          try {
+            const { data, error } = await supabase
+              .from('clientes')
+              .select('codigo')
+              .eq('codigo', codigo)
+              .single();
+              
+            if (data) {
+              e.target.style.borderColor = '#ff4444';
+              mostrarError('El código de cliente ya existe');
+            } else {
+              e.target.style.borderColor = 'rgba(0, 170, 255, 0.3)';
+            }
+          } catch (error) {
+            // No existe el código, está bien
+            e.target.style.borderColor = 'rgba(0, 170, 255, 0.3)';
+          }
+        } else {
+          if (clientes.find(c => c.codigo === codigo)) {
+            e.target.style.borderColor = '#ff4444';
+            mostrarError('El código de cliente ya existe');
+          } else {
+            e.target.style.borderColor = 'rgba(0, 170, 255, 0.3)';
+          }
+        }
       }
     }
 
