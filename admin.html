@@ -681,7 +681,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
-    // ✅ CONFIGURACIÓN SUPABASE - YA CONFIGURADO
+    // ✅ CONFIGURACIÓN SUPABASE
     const SUPABASE_URL = 'https://tghrujeeotgfseqonskm.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnaHJ1amVlb3RnZnNlcW9uc2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyNDk4OTgsImV4cCI6MjA3MjgyNTg5OH0.mA1MyI43Lx7OTtmShNc9uAdZG2C9IYBBnpsbej7GkR0';
     
@@ -716,6 +716,7 @@
       
       document.getElementById("userName").textContent = usuarioActual.usuario;
       document.getElementById("userAvatar").textContent = usuarioActual.usuario.charAt(0).toUpperCase();
+      conectado = usuarioActual.conectado || false;
     }
 
     function inicializarSupabase() {
@@ -763,7 +764,10 @@
     }
 
     async function cargarDatos() {
-      if (!conectado) return;
+      if (!conectado || !supabase) {
+        modoOffline();
+        return;
+      }
 
       try {
         // Cargar clientes desde Supabase
@@ -776,6 +780,9 @@
         
         clientes = clientesData || [];
         clientesFiltrados = [...clientes];
+        
+        // Sincronizar con localStorage
+        localStorage.setItem('clientes', JSON.stringify(clientes));
         
         actualizarEstadisticas();
         mostrarClientes();
@@ -839,7 +846,8 @@
         cliente.codigo.toLowerCase().includes(termino) ||
         cliente.nombre.toLowerCase().includes(termino) ||
         cliente.celular.includes(termino) ||
-        cliente.ubicacion.toLowerCase().includes(termino)
+        cliente.ubicacion.toLowerCase().includes(termino) ||
+        (cliente.email && cliente.email.toLowerCase().includes(termino))
       );
       mostrarClientes();
     }
@@ -877,16 +885,20 @@
             .eq('id', cliente.id);
             
           if (error) throw error;
-        } else {
-          localStorage.setItem('clientes', JSON.stringify(clientes));
         }
+        
+        // Actualizar localStorage
+        localStorage.setItem('clientes', JSON.stringify(clientes));
 
         clientesFiltrados = [...clientes];
         mostrarClientes();
         mostrarExito('Cliente actualizado correctamente');
       } catch (error) {
         console.error('Error actualizando cliente:', error);
-        mostrarError('Error al actualizar el cliente');
+        localStorage.setItem('clientes', JSON.stringify(clientes));
+        clientesFiltrados = [...clientes];
+        mostrarClientes();
+        mostrarError('Actualizado solo localmente (sin conexión)');
       }
     }
 
@@ -903,12 +915,10 @@
               .eq('id', cliente.id);
               
             if (error) throw error;
-            
-            clientes = clientes.filter(c => c.id !== cliente.id);
-          } else {
-            clientes = clientes.filter(c => c.id !== cliente.id);
-            localStorage.setItem('clientes', JSON.stringify(clientes));
           }
+          
+          clientes = clientes.filter(c => c.id !== cliente.id);
+          localStorage.setItem('clientes', JSON.stringify(clientes));
 
           clientesFiltrados = [...clientes];
           mostrarClientes();
@@ -967,19 +977,28 @@
       mostrarExito('Archivo CSV descargado correctamente');
     }
 
-    function limpiarDatos() {
+    async function limpiarDatos() {
       if (confirm('⚠️ ¿Está seguro que desea eliminar TODOS los clientes?\n\nEsta acción no se puede deshacer.')) {
         if (confirm('🚨 ÚLTIMA CONFIRMACIÓN\n\nEsto eliminará PERMANENTEMENTE todos los datos de clientes.')) {
-          if (conectado && supabase) {
-            // En producción, esto requeriría permisos especiales
-            mostrarError('Esta acción requiere permisos especiales en la base de datos');
-          } else {
+          try {
+            if (conectado && supabase) {
+              const { error } = await supabase
+                .from('clientes')
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000'); // Eliminar todos excepto uno inexistente
+                
+              if (error) throw error;
+            }
+            
             localStorage.removeItem('clientes');
             clientes = [];
             clientesFiltrados = [];
             mostrarClientes();
             actualizarEstadisticas();
             mostrarExito('Todos los datos de clientes han sido eliminados');
+          } catch (error) {
+            console.error('Error limpiando datos:', error);
+            mostrarError('Error al limpiar los datos');
           }
         }
       }
