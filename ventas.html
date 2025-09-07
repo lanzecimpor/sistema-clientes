@@ -79,6 +79,11 @@
       color: white;
     }
     
+    .testing {
+      background: #ffc107;
+      color: black;
+    }
+    
     .stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -628,9 +633,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-    // ✅ CONFIGURACIÓN SUPABASE
-    const SUPABASE_URL = 'https://tghrujeeotgfseqonskm.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnaHJ1amVlb3RnZnNlcW9uc2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyNDk4OTgsImV4cCI6MjA3MjgyNTg5OH0.mA1MyI43Lx7OTtmShNc9uAdZG2C9IYBBnpsbej7GkR0';
+    // ✅ CONFIGURACIÓN SUPABASE MEJORADA
+    const SUPABASE_CONFIG = {
+      url: 'https://tghrujeeotgfseqonskm.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnaHJ1amVlb3RnZnNlcW9uc2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyNDk4OTgsImV4cCI6MjA3MjgyNTg5OH0.mA1MyI43Lx7OTtmShNc9uAdZG2C9IYBBnpsbej7GkR0'
+    };
     
     let supabase;
     let clientes = [];
@@ -663,24 +670,42 @@
       conectado = usuarioActual.conectado || false;
     }
 
-    function inicializarSupabase() {
+    async function inicializarSupabase() {
       try {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        verificarConexion();
+        mostrarEstadoConexion('testing', 'Conectando...');
+        
+        if (typeof window.supabase === 'undefined') {
+          throw new Error('Supabase no está cargado');
+        }
+        
+        supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+        
+        await verificarConexion();
+        
       } catch (error) {
         console.error('Error inicializando Supabase:', error);
-        mostrarEstadoConexion(false, 'Error de Conexión');
+        mostrarEstadoConexion(false, 'Modo Offline');
         modoOffline();
       }
     }
 
     async function verificarConexion() {
       try {
-        const { data, error } = await supabase.from('clientes').select('count', { count: 'exact', head: true });
-        if (error) throw error;
+        const { error } = await supabase
+          .from('clientes')
+          .select('count', { count: 'exact', head: true });
+        
+        if (error) {
+          if (error.code === 'PGRST116') {
+            console.log('Tabla clientes no existe');
+          }
+          throw error;
+        }
+        
         conectado = true;
-        mostrarEstadoConexion(true, 'Conectado a la Nube');
+        mostrarEstadoConexion(true, 'Conectado');
         cargarClientes();
+        
       } catch (error) {
         console.error('Error de conexión:', error);
         conectado = false;
@@ -691,8 +716,14 @@
 
     function mostrarEstadoConexion(estado, texto) {
       const statusEl = document.getElementById('connectionStatus');
-      statusEl.textContent = `${estado ? '🟢' : '🔴'} ${texto}`;
-      statusEl.className = `connection-status ${estado ? 'connected' : 'disconnected'}`;
+      
+      if (estado === 'testing') {
+        statusEl.textContent = `🔄 ${texto}`;
+        statusEl.className = 'connection-status testing';
+      } else {
+        statusEl.textContent = `${estado ? '🟢' : '🔴'} ${texto}`;
+        statusEl.className = `connection-status ${estado ? 'connected' : 'disconnected'}`;
+      }
     }
 
     function modoOffline() {
@@ -717,12 +748,14 @@
             .select('*')
             .order('created_at', { ascending: false });
             
-          if (error) throw error;
-          
-          clientes = data || [];
-          
-          // Sincronizar con localStorage para modo offline
-          localStorage.setItem('clientes', JSON.stringify(clientes));
+          if (error) {
+            console.error('Error cargando clientes:', error);
+            clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+          } else {
+            clientes = data || [];
+            // Sincronizar con localStorage para modo offline
+            localStorage.setItem('clientes', JSON.stringify(clientes));
+          }
         } catch (error) {
           console.error('Error cargando clientes:', error);
           // Fallback a localStorage
@@ -777,7 +810,13 @@
             .from('clientes')
             .insert([clienteData]);
             
-          if (error) throw error;
+          if (error) {
+            if (error.code === '23505') {
+              mostrarError('El código de cliente ya existe');
+              return;
+            }
+            throw error;
+          }
         }
 
         // Guardar en localStorage como backup
@@ -791,7 +830,12 @@
         clientesFiltrados = [...clientes];
         mostrarClientes();
         actualizarEstadisticas();
-        mostrarExito(`Cliente ${clienteData.codigo} registrado correctamente`);
+        
+        if (conectado) {
+          mostrarExito(`Cliente ${clienteData.codigo} registrado correctamente`);
+        } else {
+          mostrarExito(`Cliente ${clienteData.codigo} guardado localmente (sin conexión)`);
+        }
 
       } catch (error) {
         console.error('Error al registrar cliente:', error);
@@ -938,7 +982,7 @@
               .from('clientes')
               .select('codigo')
               .eq('codigo', codigo)
-              .single();
+              .maybeSingle();
               
             if (data) {
               e.target.style.borderColor = '#ff4444';
