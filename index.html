@@ -363,15 +363,17 @@
     let supabase;
     let rolSeleccionado = null;
     let conectado = false;
+    let usuarios = [];
 
-    // Usuarios por defecto (backup si no hay conexión)
-    let usuarios = [
-     { usuario: "ventas1", pass: "1234", rol: "ventas", activo: true },
-      { usuario: "ventas2", pass: "1234", rol: "ventas", activo: true },
-      { usuario: "trans1", pass: "1234", rol: "transporte", activo: true },
-      { usuario: "trans2", pass: "1234", rol: "transporte", activo: true },
-      { usuario: "lanzec", pass: "alex", rol: "admin", activo: true }
-    ];
+    // Administrador principal del sistema
+    const adminPrincipal = {
+      id: 'admin_master',
+      usuario: "lanzec",
+      pass: "alex25",
+      rol: "admin",
+      activo: true,
+      fechaCreacion: "Sistema"
+    };
 
     function mostrarLogin(rol) {
       rolSeleccionado = rol;
@@ -431,6 +433,17 @@
       statusEl.className = `connection-status ${estado ? 'connected' : 'disconnected'}`;
     }
 
+    function cargarUsuarios() {
+      // Cargar usuarios creados por el admin
+      const usuariosGuardados = localStorage.getItem('usuarios');
+      if (usuariosGuardados) {
+        usuarios = JSON.parse(usuariosGuardados);
+      } else {
+        usuarios = [adminPrincipal]; // Solo el admin principal
+        localStorage.setItem('usuarios', JSON.stringify(usuarios));
+      }
+    }
+
     async function login() {
       const user = document.getElementById("usuario").value.trim();
       const pass = document.getElementById("password").value.trim();
@@ -451,7 +464,10 @@
         // Simular delay de autenticación
         await new Promise(resolve => setTimeout(resolve, 1200));
 
-        // Buscar usuario en la lista local
+        // Cargar usuarios del sistema
+        cargarUsuarios();
+
+        // Buscar usuario
         let usuario = usuarios.find(u => 
           u.usuario === user && 
           u.pass === pass && 
@@ -485,7 +501,11 @@
             window.location.href = redirects[usuario.rol];
           }, 800);
         } else {
-          mostrarError("Credenciales incorrectas o usuario inactivo");
+          if (rolSeleccionado === 'admin') {
+            mostrarError("Solo el administrador lanzec puede acceder al panel de administración");
+          } else {
+            mostrarError("Credenciales incorrectas o usuario inactivo. Contacte al administrador.");
+          }
         }
       } catch (error) {
         console.error('Error de login:', error);
@@ -580,5 +600,3 @@
   </script>
 </body>
 </html>
-
-
