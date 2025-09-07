@@ -58,6 +58,27 @@
       font-size: 24px;
     }
     
+    .connection-status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1000;
+    }
+    
+    .connected {
+      background: #28a745;
+      color: white;
+    }
+    
+    .disconnected {
+      background: #ff4444;
+      color: white;
+    }
+    
     .section {
       background: rgba(17, 24, 39, 0.95);
       backdrop-filter: blur(15px);
@@ -484,6 +505,8 @@
   </style>
 </head>
 <body>
+  <div class="connection-status" id="connectionStatus">🔄 Conectando...</div>
+  
   <div class="header">
     <div class="user-info">
       <div class="user-avatar" id="userAvatar">T</div>
@@ -539,7 +562,7 @@
   <div class="section">
     <h3>📋 Ruta Múltiple Optimizada</h3>
     <p style="color: #ccc; font-size: 14px; margin-bottom: 20px;">
-      Selecciona varios clientes para crear una ruta optimizada. Google Maps ordenará automáticamente las paradas de manera eficiente.
+      🗺️ Selecciona varios clientes para crear una <strong>ruta optimizada</strong>. Google Maps ordenará automáticamente las paradas de manera eficiente comenzando por el cliente más cercano.
     </p>
     
     <div class="selected-count" id="selectedCount">0 clientes seleccionados</div>
@@ -553,16 +576,25 @@
     </button>
   </div>
 
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <script>
+    // ✅ CONFIGURACIÓN SUPABASE - YA CONFIGURADO
+    const SUPABASE_URL = 'https://tghrujeeotgfseqonskm.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnaHJ1amVlb3RnZnNlcW9uc2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyNDk4OTgsImV4cCI6MjA3MjgyNTg5OH0.mA1MyI43Lx7OTtmShNc9uAdZG2C9IYBBnpsbej7GkR0';
+    
+    let supabase;
     let clientes = [];
     let usuarioActual = null;
     let metodoBusqueda = 'codigo';
     let clientesSeleccionados = [];
+    let conectado = false;
 
     // Inicializar
     document.addEventListener('DOMContentLoaded', function() {
       verificarSesion();
-      cargarClientes();
+      inicializarSupabase();
       inicializarEventos();
     });
 
@@ -583,6 +615,43 @@
       document.getElementById("userAvatar").textContent = usuarioActual.usuario.charAt(0).toUpperCase();
     }
 
+    function inicializarSupabase() {
+      try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        verificarConexion();
+      } catch (error) {
+        console.error('Error inicializando Supabase:', error);
+        mostrarEstadoConexion(false, 'Error de Conexión');
+        modoOffline();
+      }
+    }
+
+    async function verificarConexion() {
+      try {
+        const { data, error } = await supabase.from('clientes').select('count', { count: 'exact', head: true });
+        if (error) throw error;
+        conectado = true;
+        mostrarEstadoConexion(true, 'Conectado a la Nube');
+        cargarClientes();
+      } catch (error) {
+        console.error('Error de conexión:', error);
+        conectado = false;
+        mostrarEstadoConexion(false, 'Modo Offline');
+        modoOffline();
+      }
+    }
+
+    function mostrarEstadoConexion(estado, texto) {
+      const statusEl = document.getElementById('connectionStatus');
+      statusEl.textContent = `${estado ? '🟢' : '🔴'} ${texto}`;
+      statusEl.className = `connection-status ${estado ? 'connected' : 'disconnected'}`;
+    }
+
+    function modoOffline() {
+      clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+      mostrarSelectorClientes();
+    }
+
     function inicializarEventos() {
       document.getElementById('campoBusqueda').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
@@ -591,9 +660,24 @@
       });
     }
 
-    function cargarClientes() {
-      clientes = JSON.parse(localStorage.getItem('clientes')) || [];
-      mostrarSelectorClientes();
+    async function cargarClientes() {
+      if (!conectado) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('clientes')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        
+        clientes = data || [];
+        mostrarSelectorClientes();
+        
+      } catch (error) {
+        console.error('Error cargando clientes:', error);
+        modoOffline();
+      }
     }
 
     function cambiarMetodo(metodo) {
@@ -667,6 +751,12 @@
               <strong>Celular</strong>
               <span>${cliente.celular}</span>
             </div>
+            ${cliente.email ? `
+            <div class="client-field">
+              <strong>Email</strong>
+              <span>${cliente.email}</span>
+            </div>
+            ` : ''}
             <div class="client-field">
               <strong>Ubicación</strong>
               <span>${cliente.ubicacion}</span>
@@ -745,7 +835,7 @@
       // Crear URL de Google Maps con waypoints optimizados
       let url = "https://www.google.com/maps/dir/";
       
-      // Agregar punto de partida (se puede personalizar)
+      // Agregar punto de partida (ubicación actual)
       url += "Mi+ubicación/";
       
       // Agregar destinos
@@ -756,25 +846,30 @@
         }
       });
       
-      // Optimizar ruta automáticamente
+      // ⭐ RUTA OPTIMIZADA - Google Maps ordenará automáticamente
       url += "?optimize:true";
       
-      // Mostrar confirmación con detalles
+      // Mostrar confirmación con detalles de la ruta
       const confirmMessage = `🗺️ RUTA OPTIMIZADA\n\n` +
-        `📊 ${clientesRuta.length} paradas seleccionadas:\n\n` +
+        `📊 Resumen de la ruta:\n` +
+        `• ${clientesRuta.length} paradas seleccionadas\n` +
+        `• Google Maps optimizará el orden automáticamente\n` +
+        `• Comenzará desde tu ubicación actual\n\n` +
+        `📋 Clientes incluidos:\n` +
         clientesRuta.map((c, i) => `${i + 1}. ${c.codigo} - ${c.nombre}\n   📍 ${c.ubicacion}`).join('\n\n') +
-        `\n\n¿Abrir ruta en Google Maps?`;
+        `\n\n¿Abrir ruta optimizada en Google Maps?`;
       
       if (confirm(confirmMessage)) {
+        // Abrir Google Maps con ruta optimizada
         window.open(url, '_blank');
         
-        // Limpiar selección
+        // Limpiar selección después de crear la ruta
         clientesSeleccionados = [];
         document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
         document.getElementById('selectedCount').textContent = '0 clientes seleccionados';
         document.getElementById('btnRuta').disabled = true;
         
-        mostrarExito(`Ruta con ${clientesRuta.length} paradas abierta en Google Maps`);
+        mostrarExito(`Ruta optimizada con ${clientesRuta.length} paradas abierta en Google Maps`);
       }
     }
 
