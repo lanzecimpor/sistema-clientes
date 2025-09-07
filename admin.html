@@ -274,6 +274,30 @@
       box-shadow: 0 10px 30px rgba(40, 167, 69, 0.4);
     }
     
+    .btn-toggle-active {
+      background: linear-gradient(45deg, #28a745, #20c997);
+      color: #fff;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+    
+    .btn-toggle-active:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+    }
+    
+    .btn-toggle-inactive {
+      background: linear-gradient(45deg, #6c757d, #5a6268);
+      color: #fff;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+    
+    .btn-toggle-inactive:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(108, 117, 125, 0.4);
+    }
+    
     .data-table {
       width: 100%;
       border-collapse: collapse;
@@ -401,14 +425,23 @@
       border: 1px solid rgba(157, 78, 221, 0.2);
     }
     
-    .form-actions {
-      display: flex;
-      gap: 15px;
-      margin-top: 20px;
+    .inline-form {
+      margin: 0;
     }
     
-    .form-actions button {
-      flex: 1;
+    .inline-form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 120px 120px 100px;
+      gap: 15px;
+      align-items: center;
+    }
+    
+    .inline-form-row input,
+    .inline-form-row select,
+    .inline-form-row button {
+      margin: 0;
+      padding: 12px;
+      font-size: 14px;
     }
     
     /* Animaciones */
@@ -522,10 +555,6 @@
         grid-template-columns: 1fr;
       }
       
-      .form-actions {
-        flex-direction: column;
-      }
-      
       .inline-form-row {
         grid-template-columns: 1fr;
         gap: 10px;
@@ -557,7 +586,7 @@
   <!-- Estadísticas -->
   <div class="stats">
     <div class="stat-card">
-      <span class="stat-number" id="totalUsuarios">5</span>
+      <span class="stat-number" id="totalUsuarios">1</span>
       <span class="stat-label">Total Usuarios</span>
     </div>
     <div class="stat-card">
@@ -565,7 +594,7 @@
       <span class="stat-label">Total Clientes</span>
     </div>
     <div class="stat-card">
-      <span class="stat-number" id="usuariosActivos">5</span>
+      <span class="stat-number" id="usuariosActivos">1</span>
       <span class="stat-label">Usuarios Activos</span>
     </div>
     <div class="stat-card">
@@ -592,40 +621,22 @@
       <!-- Formulario Crear Usuario -->
       <div class="user-form">
         <h4>➕ Crear Nuevo Usuario</h4>
-        <form id="usuarioForm">
-          <div class="form-grid">
-            <div class="input-group">
-              <label for="nuevoUsuario" class="required">Nombre de Usuario</label>
-              <input type="text" id="nuevoUsuario" placeholder="usuario123" required maxlength="20">
-            </div>
-            
-            <div class="input-group">
-              <label for="nuevaContrasena" class="required">Contraseña</label>
-              <input type="password" id="nuevaContrasena" placeholder="Contraseña segura" required maxlength="50">
-            </div>
-            
-            <div class="input-group">
-              <label for="nuevoRol" class="required">Rol</label>
-              <select id="nuevoRol" required>
-                <option value="">Seleccionar rol</option>
-                <option value="ventas">Ventas</option>
-                <option value="transporte">Transporte</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </div>
-            
-            <div class="input-group">
-              <label for="nuevoEstado" class="required">Estado</label>
-              <select id="nuevoEstado" required>
-                <option value="true">Activo</option>
-                <option value="false">Inactivo</option>
-              </select>
-            </div>
-          </div>
-          
-          <div class="form-actions">
+        <form id="usuarioForm" class="inline-form">
+          <div class="inline-form-row">
+            <input type="text" id="nuevoUsuario" placeholder="Nombre usuario*" required maxlength="20">
+            <input type="password" id="nuevaContrasena" placeholder="Contraseña*" required maxlength="50">
+            <select id="nuevoRol" required>
+              <option value="">Seleccionar rol*</option>
+              <option value="ventas">Ventas</option>
+              <option value="transporte">Transporte</option>
+              <option value="admin">Administrador</option>
+            </select>
+            <select id="nuevoEstado" required>
+              <option value="true">Activo</option>
+              <option value="false">Inactivo</option>
+            </select>
             <button type="submit" class="btn-success" id="btnCrearUsuario">
-              ➕ Crear Usuario
+              ➕ Crear
             </button>
             <button type="button" class="btn-secondary" onclick="limpiarFormularioUsuario()">
               🔄 Limpiar
@@ -645,7 +656,7 @@
             <th>Usuario</th>
             <th>Rol</th>
             <th>Estado</th>
-            <th>Fecha Creación</th>
+            <th>Creado por</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -697,11 +708,11 @@
       
       <div class="form-grid">
         <div class="stat-card">
-          <span class="stat-number" id="reporteVentas">2</span>
+          <span class="stat-number" id="reporteVentas">0</span>
           <span class="stat-label">Usuarios Ventas</span>
         </div>
         <div class="stat-card">
-          <span class="stat-number" id="reporteTransporte">2</span>
+          <span class="stat-number" id="reporteTransporte">0</span>
           <span class="stat-label">Usuarios Transporte</span>
         </div>
         <div class="stat-card">
@@ -751,21 +762,21 @@
     let tabActual = 'usuarios';
     let conectado = false;
 
-    // Usuarios por defecto del sistema
-    const usuariosDefecto = [
-      { id: 'u1', usuario: "ventas1", pass: "1234", rol: "ventas", activo: true, fechaCreacion: "Sistema" },
-      { id: 'u2', usuario: "ventas2", pass: "1234", rol: "ventas", activo: true, fechaCreacion: "Sistema" },
-      { id: 'u3', usuario: "trans1", pass: "1234", rol: "transporte", activo: true, fechaCreacion: "Sistema" },
-      { id: 'u4', usuario: "trans2", pass: "1234", rol: "transporte", activo: true, fechaCreacion: "Sistema" },
-      { id: 'u5', usuario: "admin1", pass: "admin123", rol: "admin", activo: true, fechaCreacion: "Sistema" }
-    ];
+    // Administrador principal como fallback
+    const adminFallback = {
+      id: 'admin_master',
+      usuario: "lanzec",
+      password: "alex25",
+      rol: "admin",
+      activo: true,
+      created_by: "Sistema"
+    };
 
     // Inicializar
     document.addEventListener('DOMContentLoaded', function() {
       verificarSesion();
       inicializarSupabase();
       inicializarEventos();
-      cargarUsuarios();
     });
 
     function verificarSesion() {
@@ -799,7 +810,7 @@
 
     async function verificarConexion() {
       try {
-        const { data, error } = await supabase.from('clientes').select('count', { count: 'exact', head: true });
+        const { data, error } = await supabase.from('usuarios').select('count', { count: 'exact', head: true });
         if (error) throw error;
         conectado = true;
         mostrarEstadoConexion(true, 'Conectado a la Nube');
@@ -819,10 +830,13 @@
     }
 
     function modoOffline() {
+      usuarios = JSON.parse(localStorage.getItem('usuarios_backup')) || [adminFallback];
       clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+      usuariosFiltrados = [...usuarios];
       clientesFiltrados = [...clientes];
-      actualizarEstadisticas();
+      mostrarUsuarios();
       mostrarClientes();
+      actualizarEstadisticas();
     }
 
     function inicializarEventos() {
@@ -832,206 +846,6 @@
       document.getElementById('nuevoUsuario').addEventListener('blur', validarUsuarioUnico);
     }
 
-    function cargarUsuarios() {
-      // Cargar usuarios del localStorage o usar los por defecto
-      const usuariosGuardados = localStorage.getItem('usuarios');
-      if (usuariosGuardados) {
-        usuarios = JSON.parse(usuariosGuardados);
-      } else {
-        usuarios = [...usuariosDefecto];
-        localStorage.setItem('usuarios', JSON.stringify(usuarios));
-      }
-      
-      usuariosFiltrados = [...usuarios];
-      mostrarUsuarios();
-      actualizarEstadisticasUsuarios();
-    }
-
-    function mostrarUsuarios() {
-      const tbody = document.getElementById('usuariosTable');
-      
-      if (usuariosFiltrados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No hay usuarios registrados</td></tr>';
-        return;
-      }
-      
-      tbody.innerHTML = usuariosFiltrados.map((usuario, index) => `
-        <tr>
-          <td>${usuario.usuario}</td>
-          <td><span class="badge ${usuario.rol}">${usuario.rol}</span></td>
-          <td><span class="badge ${usuario.activo ? 'active' : 'inactive'}">${usuario.activo ? 'Activo' : 'Inactivo'}</span></td>
-          <td>${usuario.fechaCreacion}</td>
-          <td>
-            <button class="btn-warning" onclick="editarUsuario('${usuario.id}')">
-              ✏️ Editar
-            </button>
-            ${usuario.fechaCreacion !== 'Sistema' ? `
-            <button class="btn-danger" onclick="eliminarUsuario('${usuario.id}')">
-              🗑️ Eliminar
-            </button>
-            ` : '<span style="font-size: 12px; color: #6c757d;">Sistema</span>'}
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function filtrarUsuarios() {
-      const termino = document.getElementById('buscarUsuario').value.toLowerCase();
-      usuariosFiltrados = usuarios.filter(usuario => 
-        usuario.usuario.toLowerCase().includes(termino) ||
-        usuario.rol.toLowerCase().includes(termino)
-      );
-      mostrarUsuarios();
-    }
-
-    async function crearUsuario(e) {
-      e.preventDefault();
-      
-      const btnCrear = document.getElementById('btnCrearUsuario');
-      
-      const nuevoUsuario = {
-        id: 'u' + Date.now(),
-        usuario: document.getElementById('nuevoUsuario').value.trim(),
-        pass: document.getElementById('nuevaContrasena').value.trim(),
-        rol: document.getElementById('nuevoRol').value,
-        activo: document.getElementById('nuevoEstado').value === 'true',
-        fechaCreacion: new Date().toLocaleDateString()
-      };
-
-      // Validaciones
-      if (!nuevoUsuario.usuario || !nuevoUsuario.pass || !nuevoUsuario.rol) {
-        mostrarError("Complete todos los campos obligatorios");
-        return;
-      }
-
-      if (usuarios.find(u => u.usuario === nuevoUsuario.usuario)) {
-        mostrarError("El nombre de usuario ya existe");
-        return;
-      }
-
-      if (nuevoUsuario.pass.length < 4) {
-        mostrarError("La contraseña debe tener al menos 4 caracteres");
-        return;
-      }
-
-      // Mostrar loading
-      btnCrear.disabled = true;
-      btnCrear.innerHTML = '⏳ Creando...';
-
-      try {
-        // Simular delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Agregar usuario
-        usuarios.push(nuevoUsuario);
-        localStorage.setItem('usuarios', JSON.stringify(usuarios));
-
-        // Limpiar formulario
-        document.getElementById('usuarioForm').reset();
-        
-        // Actualizar UI
-        usuariosFiltrados = [...usuarios];
-        mostrarUsuarios();
-        actualizarEstadisticasUsuarios();
-        mostrarExito(`Usuario ${nuevoUsuario.usuario} creado correctamente`);
-
-      } catch (error) {
-        console.error('Error creando usuario:', error);
-        mostrarError('Error al crear el usuario');
-      } finally {
-        btnCrear.disabled = false;
-        btnCrear.innerHTML = '➕ Crear Usuario';
-      }
-    }
-
-    function validarUsuarioUnico(e) {
-      const usuario = e.target.value.trim();
-      if (usuario && usuarios.find(u => u.usuario === usuario)) {
-        e.target.style.borderColor = '#ff4444';
-        mostrarError('El nombre de usuario ya existe');
-      } else {
-        e.target.style.borderColor = 'rgba(157, 78, 221, 0.3)';
-      }
-    }
-
-    function limpiarFormularioUsuario() {
-      document.getElementById('usuarioForm').reset();
-      document.getElementById('nuevoUsuario').style.borderColor = 'rgba(157, 78, 221, 0.3)';
-    }
-
-    function editarUsuario(usuarioId) {
-      const usuario = usuarios.find(u => u.id === usuarioId);
-      if (!usuario) return;
-
-      if (usuario.fechaCreacion === 'Sistema') {
-        mostrarError('No se pueden editar usuarios del sistema');
-        return;
-      }
-      
-      const nuevaContrasena = prompt("Nueva contraseña (dejar vacío para mantener):", "");
-      if (nuevaContrasena !== null && nuevaContrasena.trim()) {
-        if (nuevaContrasena.length < 4) {
-          mostrarError('La contraseña debe tener al menos 4 caracteres');
-          return;
-        }
-        usuario.pass = nuevaContrasena.trim();
-      }
-      
-      const nuevoRol = prompt("Nuevo rol (ventas/transporte/admin):", usuario.rol);
-      if (nuevoRol && ['ventas', 'transporte', 'admin'].includes(nuevoRol)) {
-        usuario.rol = nuevoRol;
-      }
-      
-      const nuevoEstado = confirm("¿Usuario activo?");
-      usuario.activo = nuevoEstado;
-
-      // Guardar cambios
-      localStorage.setItem('usuarios', JSON.stringify(usuarios));
-      usuariosFiltrados = [...usuarios];
-      mostrarUsuarios();
-      actualizarEstadisticasUsuarios();
-      mostrarExito('Usuario actualizado correctamente');
-    }
-
-    function eliminarUsuario(usuarioId) {
-      const usuario = usuarios.find(u => u.id === usuarioId);
-      if (!usuario) return;
-
-      if (usuario.fechaCreacion === 'Sistema') {
-        mostrarError('No se pueden eliminar usuarios del sistema');
-        return;
-      }
-
-      if (usuario.usuario === usuarioActual.usuario) {
-        mostrarError('No puedes eliminar tu propio usuario');
-        return;
-      }
-      
-      if (confirm(`¿Eliminar usuario ${usuario.usuario}?\n\nEsta acción no se puede deshacer.`)) {
-        usuarios = usuarios.filter(u => u.id !== usuarioId);
-        localStorage.setItem('usuarios', JSON.stringify(usuarios));
-
-        usuariosFiltrados = [...usuarios];
-        mostrarUsuarios();
-        actualizarEstadisticasUsuarios();
-        mostrarExito('Usuario eliminado correctamente');
-      }
-    }
-
-    function actualizarEstadisticasUsuarios() {
-      document.getElementById('totalUsuarios').textContent = usuarios.length;
-      document.getElementById('usuariosActivos').textContent = usuarios.filter(u => u.activo).length;
-      
-      // Contar por roles
-      const ventasCount = usuarios.filter(u => u.rol === 'ventas').length;
-      const transporteCount = usuarios.filter(u => u.rol === 'transporte').length;
-      const adminCount = usuarios.filter(u => u.rol === 'admin').length;
-      
-      document.getElementById('reporteVentas').textContent = ventasCount;
-      document.getElementById('reporteTransporte').textContent = transporteCount;
-      document.getElementById('reporteAdmin').textContent = adminCount;
-    }
-
     async function cargarDatos() {
       if (!conectado || !supabase) {
         modoOffline();
@@ -1039,6 +853,41 @@
       }
 
       try {
+        // Cargar usuarios desde Supabase
+        const { data: usuariosData, error: usuariosError } = await supabase
+          .from('usuarios')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (usuariosError) throw usuariosError;
+        
+        usuarios = usuariosData || [];
+        
+        // Verificar que el admin principal esté presente
+        const adminExiste = usuarios.find(u => u.usuario === 'lanzec');
+        if (!adminExiste) {
+          // Crear admin principal si no existe
+          const { error: insertError } = await supabase
+            .from('usuarios')
+            .insert([{
+              id: 'admin-master-lanzec',
+              usuario: 'lanzec',
+              password: 'alex25',
+              rol: 'admin',
+              activo: true,
+              created_by: 'Sistema'
+            }]);
+            
+          if (!insertError) {
+            // Recargar usuarios
+            const { data: newData } = await supabase
+              .from('usuarios')
+              .select('*')
+              .order('created_at', { ascending: false });
+            usuarios = newData || [];
+          }
+        }
+
         // Cargar clientes desde Supabase
         const { data: clientesData, error: clientesError } = await supabase
           .from('clientes')
@@ -1048,13 +897,17 @@
         if (clientesError) throw clientesError;
         
         clientes = clientesData || [];
-        clientesFiltrados = [...clientes];
         
-        // Sincronizar con localStorage
+        // Sincronizar con localStorage como backup
+        localStorage.setItem('usuarios_backup', JSON.stringify(usuarios));
         localStorage.setItem('clientes', JSON.stringify(clientes));
         
-        actualizarEstadisticas();
+        usuariosFiltrados = [...usuarios];
+        clientesFiltrados = [...clientes];
+        
+        mostrarUsuarios();
         mostrarClientes();
+        actualizarEstadisticas();
         
       } catch (error) {
         console.error('Error cargando datos:', error);
@@ -1075,6 +928,298 @@
       if (tab === 'reportes') {
         actualizarReportes();
       }
+    }
+
+    function mostrarUsuarios() {
+      const tbody = document.getElementById('usuariosTable');
+      
+      if (usuariosFiltrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No hay usuarios registrados</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = usuariosFiltrados.map((usuario, index) => `
+        <tr>
+          <td><strong>${usuario.usuario}</strong></td>
+          <td><span class="badge ${usuario.rol}">${usuario.rol}</span></td>
+          <td><span class="badge ${usuario.activo ? 'active' : 'inactive'}">${usuario.activo ? 'Activo' : 'Inactivo'}</span></td>
+          <td>${usuario.created_by || 'Sistema'}</td>
+          <td>
+            <button class="${usuario.activo ? 'btn-toggle-active' : 'btn-toggle-inactive'}" onclick="toggleUsuarioEstado('${usuario.id}')">
+              ${usuario.activo ? '🔓 Desactivar' : '🔒 Activar'}
+            </button>
+            <button class="btn-warning" onclick="editarUsuario('${usuario.id}')">
+              ✏️ Editar
+            </button>
+            ${usuario.usuario !== 'lanzec' ? `
+            <button class="btn-danger" onclick="eliminarUsuario('${usuario.id}')">
+              🗑️ Eliminar
+            </button>
+            ` : '<span style="font-size: 12px; color: #6c757d; padding: 6px;">Admin Principal</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filtrarUsuarios() {
+      const termino = document.getElementById('buscarUsuario').value.toLowerCase();
+      usuariosFiltrados = usuarios.filter(usuario => 
+        usuario.usuario.toLowerCase().includes(termino) ||
+        usuario.rol.toLowerCase().includes(termino)
+      );
+      mostrarUsuarios();
+    }
+
+    async function crearUsuario(e) {
+      e.preventDefault();
+      
+      const btnCrear = document.getElementById('btnCrearUsuario');
+      
+      const nuevoUsuario = {
+        usuario: document.getElementById('nuevoUsuario').value.trim(),
+        password: document.getElementById('nuevaContrasena').value.trim(),
+        rol: document.getElementById('nuevoRol').value,
+        activo: document.getElementById('nuevoEstado').value === 'true',
+        created_by: usuarioActual.usuario
+      };
+
+      // Validaciones
+      if (!nuevoUsuario.usuario || !nuevoUsuario.password || !nuevoUsuario.rol) {
+        mostrarError("Complete todos los campos obligatorios");
+        return;
+      }
+
+      if (usuarios.find(u => u.usuario === nuevoUsuario.usuario)) {
+        mostrarError("El nombre de usuario ya existe");
+        return;
+      }
+
+      if (nuevoUsuario.password.length < 4) {
+        mostrarError("La contraseña debe tener al menos 4 caracteres");
+        return;
+      }
+
+      // Mostrar loading
+      btnCrear.disabled = true;
+      btnCrear.innerHTML = '⏳ Creando...';
+
+      try {
+        if (conectado && supabase) {
+          // Crear usuario en Supabase
+          const { data, error } = await supabase
+            .from('usuarios')
+            .insert([nuevoUsuario])
+            .select()
+            .single();
+            
+          if (error) throw error;
+          
+          // Recargar usuarios
+          await cargarDatos();
+        } else {
+          mostrarError('Sin conexión a internet. No se puede crear el usuario.');
+          return;
+        }
+
+        // Limpiar formulario
+        document.getElementById('usuarioForm').reset();
+        
+        // Actualizar UI
+        mostrarExito(`Usuario ${nuevoUsuario.usuario} creado correctamente`);
+
+      } catch (error) {
+        console.error('Error creando usuario:', error);
+        mostrarError('Error al crear el usuario');
+      } finally {
+        btnCrear.disabled = false;
+        btnCrear.innerHTML = '➕ Crear';
+      }
+    }
+
+    async function validarUsuarioUnico(e) {
+      const usuario = e.target.value.trim();
+      if (usuario) {
+        if (conectado && supabase) {
+          try {
+            const { data, error } = await supabase
+              .from('usuarios')
+              .select('usuario')
+              .eq('usuario', usuario)
+              .single();
+              
+            if (data) {
+              e.target.style.borderColor = '#ff4444';
+              mostrarError('El nombre de usuario ya existe');
+            } else {
+              e.target.style.borderColor = 'rgba(157, 78, 221, 0.3)';
+            }
+          } catch (error) {
+            // No existe el usuario, está bien
+            e.target.style.borderColor = 'rgba(157, 78, 221, 0.3)';
+          }
+        } else {
+          // Validar en array local
+          if (usuarios.find(u => u.usuario === usuario)) {
+            e.target.style.borderColor = '#ff4444';
+            mostrarError('El nombre de usuario ya existe');
+          } else {
+            e.target.style.borderColor = 'rgba(157, 78, 221, 0.3)';
+          }
+        }
+      }
+    }
+
+    function limpiarFormularioUsuario() {
+      document.getElementById('usuarioForm').reset();
+      document.getElementById('nuevoUsuario').style.borderColor = 'rgba(157, 78, 221, 0.3)';
+    }
+
+    async function editarUsuario(usuarioId) {
+      const usuario = usuarios.find(u => u.id === usuarioId);
+      if (!usuario) return;
+
+      if (usuario.usuario === 'lanzec') {
+        mostrarError('No se puede editar el administrador principal del sistema');
+        return;
+      }
+      
+      const nuevaContrasena = prompt("Nueva contraseña (dejar vacío para mantener):", "");
+      if (nuevaContrasena !== null && nuevaContrasena.trim()) {
+        if (nuevaContrasena.length < 4) {
+          mostrarError('La contraseña debe tener al menos 4 caracteres');
+          return;
+        }
+        usuario.password = nuevaContrasena.trim();
+      }
+      
+      const nuevoRol = prompt("Nuevo rol (ventas/transporte/admin):", usuario.rol);
+      if (nuevoRol && ['ventas', 'transporte', 'admin'].includes(nuevoRol)) {
+        usuario.rol = nuevoRol;
+      }
+      
+      const nuevoEstado = confirm("¿Usuario activo?");
+      usuario.activo = nuevoEstado;
+
+      try {
+        if (conectado && supabase) {
+          // Actualizar en Supabase
+          const { error } = await supabase
+            .from('usuarios')
+            .update(usuario)
+            .eq('id', usuario.id);
+            
+          if (error) throw error;
+          
+          // Recargar usuarios
+          await cargarDatos();
+        } else {
+          mostrarError('Sin conexión a internet. No se puede editar el usuario.');
+          return;
+        }
+
+        mostrarExito('Usuario actualizado correctamente');
+      } catch (error) {
+        console.error('Error actualizando usuario:', error);
+        mostrarError('Error al actualizar el usuario');
+      }
+    }
+
+    async function toggleUsuarioEstado(usuarioId) {
+      const usuario = usuarios.find(u => u.id === usuarioId);
+      if (!usuario) return;
+
+      if (usuario.usuario === 'lanzec') {
+        mostrarError('No se puede desactivar el administrador principal del sistema');
+        return;
+      }
+
+      if (usuario.usuario === usuarioActual.usuario) {
+        mostrarError('No puedes desactivar tu propio usuario');
+        return;
+      }
+
+      const accion = usuario.activo ? 'desactivar' : 'activar';
+      const confirmMessage = `¿${accion.charAt(0).toUpperCase() + accion.slice(1)} usuario ${usuario.usuario}?`;
+      
+      if (confirm(confirmMessage)) {
+        try {
+          if (conectado && supabase) {
+            // Actualizar en Supabase
+            const { error } = await supabase
+              .from('usuarios')
+              .update({ activo: !usuario.activo })
+              .eq('id', usuario.id);
+              
+            if (error) throw error;
+            
+            // Recargar usuarios
+            await cargarDatos();
+          } else {
+            mostrarError('Sin conexión a internet. No se puede cambiar el estado.');
+            return;
+          }
+          
+          const estadoTexto = !usuario.activo ? 'activado' : 'desactivado';
+          mostrarExito(`Usuario ${usuario.usuario} ${estadoTexto} correctamente`);
+        } catch (error) {
+          console.error('Error cambiando estado:', error);
+          mostrarError('Error al cambiar el estado del usuario');
+        }
+      }
+    }
+
+    async function eliminarUsuario(usuarioId) {
+      const usuario = usuarios.find(u => u.id === usuarioId);
+      if (!usuario) return;
+
+      if (usuario.usuario === 'lanzec') {
+        mostrarError('No se puede eliminar el administrador principal del sistema');
+        return;
+      }
+
+      if (usuario.usuario === usuarioActual.usuario) {
+        mostrarError('No puedes eliminar tu propio usuario');
+        return;
+      }
+      
+      if (confirm(`¿Eliminar usuario ${usuario.usuario}?\n\nEsta acción no se puede deshacer.`)) {
+        try {
+          if (conectado && supabase) {
+            // Eliminar de Supabase
+            const { error } = await supabase
+              .from('usuarios')
+              .delete()
+              .eq('id', usuario.id);
+              
+            if (error) throw error;
+            
+            // Recargar usuarios
+            await cargarDatos();
+          } else {
+            mostrarError('Sin conexión a internet. No se puede eliminar el usuario.');
+            return;
+          }
+
+          mostrarExito('Usuario eliminado correctamente');
+        } catch (error) {
+          console.error('Error eliminando usuario:', error);
+          mostrarError('Error al eliminar el usuario');
+        }
+      }
+    }
+
+    function actualizarEstadisticasUsuarios() {
+      document.getElementById('totalUsuarios').textContent = usuarios.length;
+      document.getElementById('usuariosActivos').textContent = usuarios.filter(u => u.activo).length;
+      
+      // Contar por roles
+      const ventasCount = usuarios.filter(u => u.rol === 'ventas').length;
+      const transporteCount = usuarios.filter(u => u.rol === 'transporte').length;
+      const adminCount = usuarios.filter(u => u.rol === 'admin').length;
+      
+      document.getElementById('reporteVentas').textContent = ventasCount;
+      document.getElementById('reporteTransporte').textContent = transporteCount;
+      document.getElementById('reporteAdmin').textContent = adminCount;
     }
 
     function mostrarClientes() {
@@ -1206,6 +1351,9 @@
         return fecha.toDateString() === hoy;
       }).length;
       document.getElementById('clientesHoy').textContent = clientesHoy;
+      
+      // Actualizar estadísticas de usuarios también
+      actualizarEstadisticasUsuarios();
     }
 
     function actualizarReportes() {
