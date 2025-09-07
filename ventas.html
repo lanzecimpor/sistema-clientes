@@ -58,6 +58,27 @@
       font-size: 24px;
     }
     
+    .connection-status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1000;
+    }
+    
+    .connected {
+      background: #28a745;
+      color: white;
+    }
+    
+    .disconnected {
+      background: #ff4444;
+      color: white;
+    }
+    
     .stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -503,6 +524,8 @@
   </style>
 </head>
 <body>
+  <div class="connection-status" id="connectionStatus">🔄 Conectando...</div>
+
   <div class="header">
     <div class="user-info">
       <div class="user-avatar" id="userAvatar">V</div>
@@ -558,6 +581,11 @@
         </div>
         
         <div class="input-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="cliente@email.com" maxlength="100">
+        </div>
+        
+        <div class="input-group">
           <label for="ubicacion" class="required">Ubicación</label>
           <input type="text" id="ubicacion" placeholder="Dirección completa" required maxlength="200">
         </div>
@@ -591,21 +619,29 @@
     <div id="clientesList">
       <div class="empty-state">
         <span class="empty-state-icon">📋</span>
-        <p>No hay clientes registrados</p>
-        <p style="font-size: 14px;">Registra tu primer cliente arriba</p>
+        <p>Cargando clientes...</p>
       </div>
     </div>
   </div>
 
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
+    // ✅ CONFIGURACIÓN SUPABASE
+    const SUPABASE_URL = 'https://tghrujeeotgfseqonskm.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnaHJ1amVlb3RnZnNlcW9uc2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyNDk4OTgsImV4cCI6MjA3MjgyNTg5OH0.mA1MyI43Lx7OTtmShNc9uAdZG2C9IYBBnpsbej7GkR0';
+    
+    let supabase;
     let clientes = [];
     let clientesFiltrados = [];
     let usuarioActual = null;
+    let conectado = false;
 
     // Inicializar
     document.addEventListener('DOMContentLoaded', function() {
       verificarSesion();
-      cargarClientes();
+      inicializarSupabase();
       inicializarEventos();
     });
 
@@ -624,6 +660,46 @@
       
       document.getElementById("userName").textContent = usuarioActual.usuario;
       document.getElementById("userAvatar").textContent = usuarioActual.usuario.charAt(0).toUpperCase();
+      conectado = usuarioActual.conectado || false;
+    }
+
+    function inicializarSupabase() {
+      try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        verificarConexion();
+      } catch (error) {
+        console.error('Error inicializando Supabase:', error);
+        mostrarEstadoConexion(false, 'Error de Conexión');
+        modoOffline();
+      }
+    }
+
+    async function verificarConexion() {
+      try {
+        const { data, error } = await supabase.from('clientes').select('count', { count: 'exact', head: true });
+        if (error) throw error;
+        conectado = true;
+        mostrarEstadoConexion(true, 'Conectado a la Nube');
+        cargarClientes();
+      } catch (error) {
+        console.error('Error de conexión:', error);
+        conectado = false;
+        mostrarEstadoConexion(false, 'Modo Offline');
+        modoOffline();
+      }
+    }
+
+    function mostrarEstadoConexion(estado, texto) {
+      const statusEl = document.getElementById('connectionStatus');
+      statusEl.textContent = `${estado ? '🟢' : '🔴'} ${texto}`;
+      statusEl.className = `connection-status ${estado ? 'connected' : 'disconnected'}`;
+    }
+
+    function modoOffline() {
+      clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+      clientesFiltrados = [...clientes];
+      mostrarClientes();
+      actualizarEstadisticas();
     }
 
     function inicializarEventos() {
@@ -633,8 +709,30 @@
       document.getElementById('codigo').addEventListener('blur', validarCodigoUnico);
     }
 
-    function cargarClientes() {
-      clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+    async function cargarClientes() {
+      if (conectado && supabase) {
+        try {
+          const { data, error } = await supabase
+            .from('clientes')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+          if (error) throw error;
+          
+          clientes = data || [];
+          
+          // Sincronizar con localStorage para modo offline
+          localStorage.setItem('clientes', JSON.stringify(clientes));
+        } catch (error) {
+          console.error('Error cargando clientes:', error);
+          // Fallback a localStorage
+          clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+        }
+      } else {
+        // Modo offline
+        clientes = JSON.parse(localStorage.getItem('clientes')) || [];
+      }
+      
       clientesFiltrados = [...clientes];
       mostrarClientes();
       actualizarEstadisticas();
@@ -646,14 +744,15 @@
       const btnGuardar = document.getElementById('btnGuardar');
       
       const clienteData = {
+        id: crypto.randomUUID(), // Generar ID único
         codigo: document.getElementById('codigo').value.trim().toUpperCase(),
         nombre: document.getElementById('nombre').value.trim(),
         celular: document.getElementById('celular').value.trim(),
+        email: document.getElementById('email').value.trim() || null,
         ubicacion: document.getElementById('ubicacion').value.trim(),
-        referencia: document.getElementById('referencia').value.trim() || '',
-        fechaRegistro: new Date().toLocaleDateString(),
-        horaRegistro: new Date().toLocaleTimeString(),
-        usuario: usuarioActual.usuario
+        referencia: document.getElementById('referencia').value.trim() || null,
+        created_at: new Date().toISOString(),
+        created_by: usuarioActual.usuario
       };
 
       // Validaciones
@@ -672,9 +771,16 @@
       btnGuardar.innerHTML = '⏳ Guardando...';
 
       try {
-        // Simular delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Intentar guardar en Supabase primero
+        if (conectado && supabase) {
+          const { error } = await supabase
+            .from('clientes')
+            .insert([clienteData]);
+            
+          if (error) throw error;
+        }
 
+        // Guardar en localStorage como backup
         clientes.unshift(clienteData);
         localStorage.setItem('clientes', JSON.stringify(clientes));
 
@@ -688,7 +794,14 @@
         mostrarExito(`Cliente ${clienteData.codigo} registrado correctamente`);
 
       } catch (error) {
-        mostrarError('Error al registrar el cliente');
+        console.error('Error al registrar cliente:', error);
+        // Intentar guardar al menos en localStorage
+        clientes.unshift(clienteData);
+        localStorage.setItem('clientes', JSON.stringify(clientes));
+        clientesFiltrados = [...clientes];
+        mostrarClientes();
+        actualizarEstadisticas();
+        mostrarError('Guardado solo localmente (sin conexión a internet)');
       } finally {
         btnGuardar.disabled = false;
         btnGuardar.innerHTML = '💾 Registrar Cliente';
@@ -734,6 +847,12 @@
               <strong>Celular</strong>
               <span>${cliente.celular}</span>
             </div>
+            ${cliente.email ? `
+            <div class="client-field">
+              <strong>Email</strong>
+              <span>${cliente.email}</span>
+            </div>
+            ` : ''}
             <div class="client-field">
               <strong>Ubicación</strong>
               <span>${cliente.ubicacion}</span>
@@ -746,7 +865,7 @@
             ` : ''}
             <div class="client-field">
               <strong>Registrado</strong>
-              <span>${cliente.fechaRegistro} por ${cliente.usuario}</span>
+              <span>${new Date(cliente.created_at).toLocaleDateString()} por ${cliente.created_by}</span>
             </div>
           </div>
           <div class="client-actions">
@@ -759,7 +878,7 @@
             <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cliente.ubicacion)}" target="_blank" class="action-btn">
               📍 Ubicación
             </a>
-            <button onclick="editarCliente(${clientes.indexOf(cliente)})" class="action-btn edit">
+            <button onclick="editarCliente('${cliente.id}')" class="action-btn edit">
               ✏️ Editar
             </button>
           </div>
@@ -774,7 +893,8 @@
         cliente.nombre.toLowerCase().includes(termino) ||
         cliente.celular.includes(termino) ||
         cliente.ubicacion.toLowerCase().includes(termino) ||
-        (cliente.referencia && cliente.referencia.toLowerCase().includes(termino))
+        (cliente.referencia && cliente.referencia.toLowerCase().includes(termino)) ||
+        (cliente.email && cliente.email.toLowerCase().includes(termino))
       );
       mostrarClientes();
     }
@@ -787,13 +907,13 @@
       document.getElementById('totalClientes').textContent = clientes.length;
       
       const clientesHoy = clientes.filter(c => {
-        const fecha = new Date(c.fechaRegistro.split('/').reverse().join('-'));
+        const fecha = new Date(c.created_at);
         return fecha.toDateString() === hoy;
       }).length;
       document.getElementById('clientesHoy').textContent = clientesHoy;
 
       const clientesMes = clientes.filter(c => {
-        const fecha = new Date(c.fechaRegistro.split('/').reverse().join('-'));
+        const fecha = new Date(c.created_at);
         return fecha.getMonth() === mesActual && fecha.getFullYear() === añoActual;
       }).length;
       document.getElementById('clientesMes').textContent = clientesMes;
@@ -819,8 +939,9 @@
       }
     }
 
-    function editarCliente(index) {
-      const cliente = clientes[index];
+    async function editarCliente(clienteId) {
+      const cliente = clientes.find(c => c.id === clienteId);
+      if (!cliente) return;
       
       const nuevoNombre = prompt("Nuevo nombre:", cliente.nombre);
       if (nuevoNombre && nuevoNombre !== cliente.nombre) {
@@ -832,20 +953,40 @@
         cliente.celular = nuevoCelular;
       }
       
+      const nuevoEmail = prompt("Nuevo email:", cliente.email || '');
+      cliente.email = nuevoEmail || null;
+      
       const nuevaUbicacion = prompt("Nueva ubicación:", cliente.ubicacion);
       if (nuevaUbicacion && nuevaUbicacion !== cliente.ubicacion) {
         cliente.ubicacion = nuevaUbicacion;
       }
       
       const nuevaReferencia = prompt("Nueva referencia:", cliente.referencia || '');
-      if (nuevaReferencia !== null) {
-        cliente.referencia = nuevaReferencia;
-      }
+      cliente.referencia = nuevaReferencia || null;
 
-      localStorage.setItem('clientes', JSON.stringify(clientes));
-      clientesFiltrados = [...clientes];
-      mostrarClientes();
-      mostrarExito('Cliente actualizado correctamente');
+      try {
+        // Actualizar en Supabase
+        if (conectado && supabase) {
+          const { error } = await supabase
+            .from('clientes')
+            .update(cliente)
+            .eq('id', cliente.id);
+            
+          if (error) throw error;
+        }
+
+        // Actualizar localStorage
+        localStorage.setItem('clientes', JSON.stringify(clientes));
+        clientesFiltrados = [...clientes];
+        mostrarClientes();
+        mostrarExito('Cliente actualizado correctamente');
+      } catch (error) {
+        console.error('Error actualizando cliente:', error);
+        localStorage.setItem('clientes', JSON.stringify(clientes));
+        clientesFiltrados = [...clientes];
+        mostrarClientes();
+        mostrarError('Actualizado solo localmente (sin conexión)');
+      }
     }
 
     function exportarClientes() {
@@ -855,9 +996,9 @@
       }
 
       const csvContent = "data:text/csv;charset=utf-8," 
-        + "Código,Nombre,Celular,Ubicación,Referencia,Fecha Registro,Usuario\n"
+        + "Código,Nombre,Celular,Email,Ubicación,Referencia,Fecha Registro,Usuario\n"
         + clientes.map(c => 
-          `"${c.codigo}","${c.nombre}","${c.celular}","${c.ubicacion}","${c.referencia || ''}","${c.fechaRegistro}","${c.usuario}"`
+          `"${c.codigo}","${c.nombre}","${c.celular}","${c.email || ''}","${c.ubicacion}","${c.referencia || ''}","${new Date(c.created_at).toLocaleDateString()}","${c.created_by}"`
         ).join("\n");
       
       const encodedUri = encodeURI(csvContent);
