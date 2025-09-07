@@ -264,6 +264,16 @@
       box-shadow: 0 10px 30px rgba(255, 193, 7, 0.4);
     }
     
+    .btn-success {
+      background: linear-gradient(45deg, #28a745, #20c997);
+      color: #fff;
+    }
+    
+    .btn-success:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(40, 167, 69, 0.4);
+    }
+    
     .data-table {
       width: 100%;
       border-collapse: collapse;
@@ -383,6 +393,24 @@
       margin-top: 20px;
     }
     
+    .user-form {
+      background: rgba(10, 10, 26, 0.8);
+      padding: 25px;
+      border-radius: 15px;
+      margin-bottom: 25px;
+      border: 1px solid rgba(157, 78, 221, 0.2);
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .form-actions button {
+      flex: 1;
+    }
+    
     /* Animaciones */
     @keyframes slideInDown {
       from {
@@ -493,6 +521,19 @@
       .tools-grid {
         grid-template-columns: 1fr;
       }
+      
+      .form-actions {
+        flex-direction: column;
+      }
+      
+      .inline-form-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      
+      .inline-form-row button {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -547,7 +588,51 @@
     <!-- Tab Usuarios -->
     <div id="usuarios-tab" class="tab-content active">
       <h3>👥 Gestión de Usuarios</h3>
-      <p style="color: #ccc; margin-bottom: 20px;">Los usuarios se gestionan en la base de datos. Aquí puedes ver los usuarios actuales del sistema.</p>
+      
+      <!-- Formulario Crear Usuario -->
+      <div class="user-form">
+        <h4>➕ Crear Nuevo Usuario</h4>
+        <form id="usuarioForm">
+          <div class="form-grid">
+            <div class="input-group">
+              <label for="nuevoUsuario" class="required">Nombre de Usuario</label>
+              <input type="text" id="nuevoUsuario" placeholder="usuario123" required maxlength="20">
+            </div>
+            
+            <div class="input-group">
+              <label for="nuevaContrasena" class="required">Contraseña</label>
+              <input type="password" id="nuevaContrasena" placeholder="Contraseña segura" required maxlength="50">
+            </div>
+            
+            <div class="input-group">
+              <label for="nuevoRol" class="required">Rol</label>
+              <select id="nuevoRol" required>
+                <option value="">Seleccionar rol</option>
+                <option value="ventas">Ventas</option>
+                <option value="transporte">Transporte</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+            
+            <div class="input-group">
+              <label for="nuevoEstado" class="required">Estado</label>
+              <select id="nuevoEstado" required>
+                <option value="true">Activo</option>
+                <option value="false">Inactivo</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="btn-success" id="btnCrearUsuario">
+              ➕ Crear Usuario
+            </button>
+            <button type="button" class="btn-secondary" onclick="limpiarFormularioUsuario()">
+              🔄 Limpiar
+            </button>
+          </div>
+        </form>
+      </div>
       
       <div class="search-bar">
         <span class="search-icon">🔍</span>
@@ -561,39 +646,11 @@
             <th>Rol</th>
             <th>Estado</th>
             <th>Fecha Creación</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody id="usuariosTable">
-          <tr>
-            <td>ventas1</td>
-            <td><span class="badge ventas">ventas</span></td>
-            <td><span class="badge active">Activo</span></td>
-            <td>Sistema</td>
-          </tr>
-          <tr>
-            <td>ventas2</td>
-            <td><span class="badge ventas">ventas</span></td>
-            <td><span class="badge active">Activo</span></td>
-            <td>Sistema</td>
-          </tr>
-          <tr>
-            <td>trans1</td>
-            <td><span class="badge transporte">transporte</span></td>
-            <td><span class="badge active">Activo</span></td>
-            <td>Sistema</td>
-          </tr>
-          <tr>
-            <td>trans2</td>
-            <td><span class="badge transporte">transporte</span></td>
-            <td><span class="badge active">Activo</span></td>
-            <td>Sistema</td>
-          </tr>
-          <tr>
-            <td>admin1</td>
-            <td><span class="badge admin">admin</span></td>
-            <td><span class="badge active">Activo</span></td>
-            <td>Sistema</td>
-          </tr>
+          <!-- Los usuarios se cargarán dinámicamente -->
         </tbody>
       </table>
     </div>
@@ -694,11 +751,21 @@
     let tabActual = 'usuarios';
     let conectado = false;
 
+    // Usuarios por defecto del sistema
+    const usuariosDefecto = [
+      { id: 'u1', usuario: "ventas1", pass: "1234", rol: "ventas", activo: true, fechaCreacion: "Sistema" },
+      { id: 'u2', usuario: "ventas2", pass: "1234", rol: "ventas", activo: true, fechaCreacion: "Sistema" },
+      { id: 'u3', usuario: "trans1", pass: "1234", rol: "transporte", activo: true, fechaCreacion: "Sistema" },
+      { id: 'u4', usuario: "trans2", pass: "1234", rol: "transporte", activo: true, fechaCreacion: "Sistema" },
+      { id: 'u5', usuario: "admin1", pass: "admin123", rol: "admin", activo: true, fechaCreacion: "Sistema" }
+    ];
+
     // Inicializar
     document.addEventListener('DOMContentLoaded', function() {
       verificarSesion();
       inicializarSupabase();
       inicializarEventos();
+      cargarUsuarios();
     });
 
     function verificarSesion() {
@@ -761,6 +828,208 @@
     function inicializarEventos() {
       document.getElementById('buscarUsuario').addEventListener('input', filtrarUsuarios);
       document.getElementById('buscarClienteAdmin').addEventListener('input', filtrarClientes);
+      document.getElementById('usuarioForm').addEventListener('submit', crearUsuario);
+      document.getElementById('nuevoUsuario').addEventListener('blur', validarUsuarioUnico);
+    }
+
+    function cargarUsuarios() {
+      // Cargar usuarios del localStorage o usar los por defecto
+      const usuariosGuardados = localStorage.getItem('usuarios');
+      if (usuariosGuardados) {
+        usuarios = JSON.parse(usuariosGuardados);
+      } else {
+        usuarios = [...usuariosDefecto];
+        localStorage.setItem('usuarios', JSON.stringify(usuarios));
+      }
+      
+      usuariosFiltrados = [...usuarios];
+      mostrarUsuarios();
+      actualizarEstadisticasUsuarios();
+    }
+
+    function mostrarUsuarios() {
+      const tbody = document.getElementById('usuariosTable');
+      
+      if (usuariosFiltrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No hay usuarios registrados</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = usuariosFiltrados.map((usuario, index) => `
+        <tr>
+          <td>${usuario.usuario}</td>
+          <td><span class="badge ${usuario.rol}">${usuario.rol}</span></td>
+          <td><span class="badge ${usuario.activo ? 'active' : 'inactive'}">${usuario.activo ? 'Activo' : 'Inactivo'}</span></td>
+          <td>${usuario.fechaCreacion}</td>
+          <td>
+            <button class="btn-warning" onclick="editarUsuario('${usuario.id}')">
+              ✏️ Editar
+            </button>
+            ${usuario.fechaCreacion !== 'Sistema' ? `
+            <button class="btn-danger" onclick="eliminarUsuario('${usuario.id}')">
+              🗑️ Eliminar
+            </button>
+            ` : '<span style="font-size: 12px; color: #6c757d;">Sistema</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filtrarUsuarios() {
+      const termino = document.getElementById('buscarUsuario').value.toLowerCase();
+      usuariosFiltrados = usuarios.filter(usuario => 
+        usuario.usuario.toLowerCase().includes(termino) ||
+        usuario.rol.toLowerCase().includes(termino)
+      );
+      mostrarUsuarios();
+    }
+
+    async function crearUsuario(e) {
+      e.preventDefault();
+      
+      const btnCrear = document.getElementById('btnCrearUsuario');
+      
+      const nuevoUsuario = {
+        id: 'u' + Date.now(),
+        usuario: document.getElementById('nuevoUsuario').value.trim(),
+        pass: document.getElementById('nuevaContrasena').value.trim(),
+        rol: document.getElementById('nuevoRol').value,
+        activo: document.getElementById('nuevoEstado').value === 'true',
+        fechaCreacion: new Date().toLocaleDateString()
+      };
+
+      // Validaciones
+      if (!nuevoUsuario.usuario || !nuevoUsuario.pass || !nuevoUsuario.rol) {
+        mostrarError("Complete todos los campos obligatorios");
+        return;
+      }
+
+      if (usuarios.find(u => u.usuario === nuevoUsuario.usuario)) {
+        mostrarError("El nombre de usuario ya existe");
+        return;
+      }
+
+      if (nuevoUsuario.pass.length < 4) {
+        mostrarError("La contraseña debe tener al menos 4 caracteres");
+        return;
+      }
+
+      // Mostrar loading
+      btnCrear.disabled = true;
+      btnCrear.innerHTML = '⏳ Creando...';
+
+      try {
+        // Simular delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Agregar usuario
+        usuarios.push(nuevoUsuario);
+        localStorage.setItem('usuarios', JSON.stringify(usuarios));
+
+        // Limpiar formulario
+        document.getElementById('usuarioForm').reset();
+        
+        // Actualizar UI
+        usuariosFiltrados = [...usuarios];
+        mostrarUsuarios();
+        actualizarEstadisticasUsuarios();
+        mostrarExito(`Usuario ${nuevoUsuario.usuario} creado correctamente`);
+
+      } catch (error) {
+        console.error('Error creando usuario:', error);
+        mostrarError('Error al crear el usuario');
+      } finally {
+        btnCrear.disabled = false;
+        btnCrear.innerHTML = '➕ Crear Usuario';
+      }
+    }
+
+    function validarUsuarioUnico(e) {
+      const usuario = e.target.value.trim();
+      if (usuario && usuarios.find(u => u.usuario === usuario)) {
+        e.target.style.borderColor = '#ff4444';
+        mostrarError('El nombre de usuario ya existe');
+      } else {
+        e.target.style.borderColor = 'rgba(157, 78, 221, 0.3)';
+      }
+    }
+
+    function limpiarFormularioUsuario() {
+      document.getElementById('usuarioForm').reset();
+      document.getElementById('nuevoUsuario').style.borderColor = 'rgba(157, 78, 221, 0.3)';
+    }
+
+    function editarUsuario(usuarioId) {
+      const usuario = usuarios.find(u => u.id === usuarioId);
+      if (!usuario) return;
+
+      if (usuario.fechaCreacion === 'Sistema') {
+        mostrarError('No se pueden editar usuarios del sistema');
+        return;
+      }
+      
+      const nuevaContrasena = prompt("Nueva contraseña (dejar vacío para mantener):", "");
+      if (nuevaContrasena !== null && nuevaContrasena.trim()) {
+        if (nuevaContrasena.length < 4) {
+          mostrarError('La contraseña debe tener al menos 4 caracteres');
+          return;
+        }
+        usuario.pass = nuevaContrasena.trim();
+      }
+      
+      const nuevoRol = prompt("Nuevo rol (ventas/transporte/admin):", usuario.rol);
+      if (nuevoRol && ['ventas', 'transporte', 'admin'].includes(nuevoRol)) {
+        usuario.rol = nuevoRol;
+      }
+      
+      const nuevoEstado = confirm("¿Usuario activo?");
+      usuario.activo = nuevoEstado;
+
+      // Guardar cambios
+      localStorage.setItem('usuarios', JSON.stringify(usuarios));
+      usuariosFiltrados = [...usuarios];
+      mostrarUsuarios();
+      actualizarEstadisticasUsuarios();
+      mostrarExito('Usuario actualizado correctamente');
+    }
+
+    function eliminarUsuario(usuarioId) {
+      const usuario = usuarios.find(u => u.id === usuarioId);
+      if (!usuario) return;
+
+      if (usuario.fechaCreacion === 'Sistema') {
+        mostrarError('No se pueden eliminar usuarios del sistema');
+        return;
+      }
+
+      if (usuario.usuario === usuarioActual.usuario) {
+        mostrarError('No puedes eliminar tu propio usuario');
+        return;
+      }
+      
+      if (confirm(`¿Eliminar usuario ${usuario.usuario}?\n\nEsta acción no se puede deshacer.`)) {
+        usuarios = usuarios.filter(u => u.id !== usuarioId);
+        localStorage.setItem('usuarios', JSON.stringify(usuarios));
+
+        usuariosFiltrados = [...usuarios];
+        mostrarUsuarios();
+        actualizarEstadisticasUsuarios();
+        mostrarExito('Usuario eliminado correctamente');
+      }
+    }
+
+    function actualizarEstadisticasUsuarios() {
+      document.getElementById('totalUsuarios').textContent = usuarios.length;
+      document.getElementById('usuariosActivos').textContent = usuarios.filter(u => u.activo).length;
+      
+      // Contar por roles
+      const ventasCount = usuarios.filter(u => u.rol === 'ventas').length;
+      const transporteCount = usuarios.filter(u => u.rol === 'transporte').length;
+      const adminCount = usuarios.filter(u => u.rol === 'admin').length;
+      
+      document.getElementById('reporteVentas').textContent = ventasCount;
+      document.getElementById('reporteTransporte').textContent = transporteCount;
+      document.getElementById('reporteAdmin').textContent = adminCount;
     }
 
     async function cargarDatos() {
@@ -834,10 +1103,6 @@
           </td>
         </tr>
       `).join('');
-    }
-
-    function filtrarUsuarios() {
-      // Los usuarios están estáticos por ahora
     }
 
     function filtrarClientes() {
@@ -985,7 +1250,7 @@
               const { error } = await supabase
                 .from('clientes')
                 .delete()
-                .neq('id', '00000000-0000-0000-0000-000000000000'); // Eliminar todos excepto uno inexistente
+                .neq('id', '00000000-0000-0000-0000-000000000000');
                 
               if (error) throw error;
             }
@@ -1007,8 +1272,9 @@
     function respaldarDatos() {
       const backup = {
         clientes: clientes,
+        usuarios: usuarios,
         fecha: new Date().toISOString(),
-        version: '1.0',
+        version: '2.0',
         usuario: usuarioActual.usuario
       };
       
@@ -1017,12 +1283,12 @@
       
       const link = document.createElement("a");
       link.setAttribute("href", dataUri);
-      link.setAttribute("download", `backup_sistema_${new Date().toISOString().split('T')[0]}.json`);
+      link.setAttribute("download", `backup_sistema_completo_${new Date().toISOString().split('T')[0]}.json`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      mostrarExito('Respaldo creado correctamente');
+      mostrarExito('Respaldo completo creado correctamente');
     }
 
     function sincronizarDatos() {
@@ -1036,11 +1302,18 @@
 
     function verEstadisticasDetalladas() {
       const stats = {
+        totalUsuarios: usuarios.length,
+        usuariosActivos: usuarios.filter(u => u.activo).length,
         totalClientes: clientes.length,
         clientesHoy: clientes.filter(c => new Date(c.created_at).toDateString() === new Date().toDateString()).length,
         clientesPorUsuario: {},
-        ubicacionesMasComunes: {}
+        usuariosPorRol: {}
       };
+
+      // Usuarios por rol
+      usuarios.forEach(u => {
+        stats.usuariosPorRol[u.rol] = (stats.usuariosPorRol[u.rol] || 0) + 1;
+      });
 
       // Clientes por usuario
       clientes.forEach(c => {
@@ -1049,9 +1322,14 @@
       });
 
       const mensaje = `📊 ESTADÍSTICAS DETALLADAS\n\n` +
-        `📋 Total de clientes: ${stats.totalClientes}\n` +
-        `📅 Clientes registrados hoy: ${stats.clientesHoy}\n\n` +
-        `👥 Clientes por usuario:\n` +
+        `👥 USUARIOS:\n` +
+        `• Total: ${stats.totalUsuarios}\n` +
+        `• Activos: ${stats.usuariosActivos}\n` +
+        `• Por rol: ${Object.entries(stats.usuariosPorRol).map(([rol, cantidad]) => `${rol}: ${cantidad}`).join(', ')}\n\n` +
+        `📋 CLIENTES:\n` +
+        `• Total: ${stats.totalClientes}\n` +
+        `• Registrados hoy: ${stats.clientesHoy}\n\n` +
+        `📈 CLIENTES POR USUARIO:\n` +
         Object.entries(stats.clientesPorUsuario)
           .map(([usuario, cantidad]) => `• ${usuario}: ${cantidad} clientes`)
           .join('\n');
