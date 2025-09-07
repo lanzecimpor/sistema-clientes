@@ -31,6 +31,27 @@
       pointer-events: none;
     }
     
+    .connection-status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1000;
+    }
+    
+    .connected {
+      background: #28a745;
+      color: white;
+    }
+    
+    .disconnected {
+      background: #ff4444;
+      color: white;
+    }
+    
     .login-box {
       background: rgba(17, 24, 39, 0.95);
       backdrop-filter: blur(15px);
@@ -281,6 +302,7 @@
   </style>
 </head>
 <body>
+  <div class="connection-status" id="connectionStatus">🔄 Conectando...</div>
   <div class="particles" id="particles"></div>
   
   <div class="login-box">
@@ -330,10 +352,19 @@
     </div>
   </div>
 
-  <script>
-    let rolSeleccionado = null;
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    // Usuarios por defecto
+  <script>
+    // ✅ CONFIGURACIÓN SUPABASE
+    const SUPABASE_URL = 'https://tghrujeeotgfseqonskm.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnaHJ1amVlb3RnZnNlcW9uc2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyNDk4OTgsImV4cCI6MjA3MjgyNTg5OH0.mA1MyI43Lx7OTtmShNc9uAdZG2C9IYBBnpsbej7GkR0';
+    
+    let supabase;
+    let rolSeleccionado = null;
+    let conectado = false;
+
+    // Usuarios por defecto (backup si no hay conexión)
     let usuarios = [
       { usuario: "ventas1", pass: "1234", rol: "ventas", activo: true },
       { usuario: "ventas2", pass: "1234", rol: "ventas", activo: true },
@@ -370,6 +401,36 @@
       document.getElementById("loading").style.display = "none";
     }
 
+    function inicializarSupabase() {
+      try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        verificarConexion();
+      } catch (error) {
+        console.error('Error inicializando Supabase:', error);
+        mostrarEstadoConexion(false, 'Modo Offline');
+        conectado = false;
+      }
+    }
+
+    async function verificarConexion() {
+      try {
+        const { data, error } = await supabase.from('clientes').select('count', { count: 'exact', head: true });
+        if (error) throw error;
+        conectado = true;
+        mostrarEstadoConexion(true, 'Conectado');
+      } catch (error) {
+        console.error('Error de conexión:', error);
+        conectado = false;
+        mostrarEstadoConexion(false, 'Modo Offline');
+      }
+    }
+
+    function mostrarEstadoConexion(estado, texto) {
+      const statusEl = document.getElementById('connectionStatus');
+      statusEl.textContent = `${estado ? '🟢' : '🔴'} ${texto}`;
+      statusEl.className = `connection-status ${estado ? 'connected' : 'disconnected'}`;
+    }
+
     async function login() {
       const user = document.getElementById("usuario").value.trim();
       const pass = document.getElementById("password").value.trim();
@@ -390,6 +451,7 @@
         // Simular delay de autenticación
         await new Promise(resolve => setTimeout(resolve, 1200));
 
+        // Buscar usuario en la lista local
         let usuario = usuarios.find(u => 
           u.usuario === user && 
           u.pass === pass && 
@@ -403,7 +465,8 @@
             usuario: usuario.usuario,
             rol: usuario.rol,
             timestamp: Date.now(),
-            sessionId: generateSessionId()
+            sessionId: generateSessionId(),
+            conectado: conectado
           };
           
           sessionStorage.setItem("sesion", JSON.stringify(sesionData));
@@ -503,6 +566,7 @@
     // Inicializar al cargar
     document.addEventListener('DOMContentLoaded', function() {
       verificarSesion();
+      inicializarSupabase();
       crearParticulas();
       
       // Mostrar elementos con delay
